@@ -1,12 +1,25 @@
 """NoteRepository class with full CRUD operations and atomic writes."""
 
 import os
+from io import StringIO
 from pathlib import Path
+
+from ruamel.yaml import YAML
 
 from .errors import FileIOError, NoteNotFoundError
 from .models import Note, NoteMetadata
 from .parsing import parse_frontmatter
 from .validation import validate_filename, validate_path
+
+
+def _build_note_content(title: str, tags: list[str], created: str, body: str) -> str:
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    stream = StringIO()
+    data = {"title": title, "tags": tags, "created": created}
+    yaml.dump(data, stream)
+    yaml_text = stream.getvalue()
+    return f"---\n{yaml_text}---\n{body}"
 
 
 def _atomic_write(path: Path, content: str) -> None:
@@ -34,9 +47,8 @@ class NoteRepository:
         self.notes_dir.mkdir(parents=True, exist_ok=True)
 
     def read_note(self, filename: str) -> Note:
-        validate_path(self.notes_dir, filename)
-        validate_filename(filename)
         path = validate_path(self.notes_dir, filename)
+        validate_filename(filename)
 
         if not path.exists():
             raise NoteNotFoundError(filename)
@@ -58,15 +70,7 @@ class NoteRepository:
         validate_filename(filename)
         path = validate_path(self.notes_dir, filename)
 
-        tags_str = ", ".join(tags)
-        content = (
-            f"---\n"
-            f"title: \"{title}\"\n"
-            f"tags: [{tags_str}]\n"
-            f"created: \"{created}\"\n"
-            f"---\n"
-            f"{body}"
-        )
+        content = _build_note_content(title, tags, created, body)
 
         try:
             _atomic_write(path, content)
