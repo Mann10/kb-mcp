@@ -184,7 +184,9 @@ def get_tags(*, token=None, _store=None) -> dict:
 def get_note(title: str, *, token=None, _store=None) -> dict:
     """Retrieve a single note by case-insensitive title/stem lookup."""
     repo = _resolve_repo()
-    name = (title or "").strip()
+    if not isinstance(title, str):
+        return {"found": False, "message": f"Note '{title}' not found."}
+    name = title.strip()
     if name.lower().endswith(".md"):
         name = name[:-3]
     if not name:
@@ -198,6 +200,17 @@ def get_note(title: str, *, token=None, _store=None) -> dict:
     except OSError:
         stem_map = {}
     real_stem = stem_map.get(name.lower())
+    if real_stem is None:
+        # Fall back to display-title lookup (stem is canonical, title is D-04 alias).
+        wanted = name.lower()
+        for stem in sorted(stem_map.values()):
+            try:
+                candidate = repo.read_note(stem + ".md")
+            except Exception:
+                continue
+            if (candidate.metadata.title or "").strip().lower() == wanted:
+                real_stem = stem
+                break
     if real_stem is None:
         return {"found": False, "message": f"Note '{title}' not found."}
     try:
