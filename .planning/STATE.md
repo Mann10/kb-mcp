@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-last_updated: "2026-10-09T17:27:00.000Z"
+last_updated: "2026-10-09T23:02:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 4
@@ -22,11 +22,11 @@ progress:
 
 ## Current Position
 
-Phase: 05 (core-read-tools) — IN PROGRESS
-Plan: 1 of 2 complete (05-01 search+get 24c4382 + addeb75)
+Phase: 05 (core-read-tools) — COMPLETE
+Plan: 2 of 2 complete (05-01 search+get 24c4382 + addeb75; 05-02 list+tags 5413b10 + db86e19)
 **Phase:** 5
-**Plan:** 1 of 2 complete
-**Status:** Executing
+**Plan:** 2 of 2 complete
+**Status:** Phase 05 complete, ready for Phase 06
 **Progress:** [x] 100% (Phase 1 complete)
 
 ## Performance Metrics
@@ -64,6 +64,7 @@ Plan: 1 of 2 complete (05-01 search+get 24c4382 + addeb75)
 - Rotate carries identity with no --type flag and verbatim TTL carryover unless --ttl overrides (04-02)
 - Read tools return structured dicts with message field; search ranks body > title/stem > tags-only, limit 10 default / 50 max (05-01)
 - Search enumerates .md stems via notes_dir scan + read_note per note (list_notes drops stems); get_note failures map to structured not-found (05-01)
+- list_notes rescans notes_dir for stems (NoteMetadata carries none), created-ascending, metadata-only entries; get_tags counts case-normalized with first-seen display, sorted (-count, tag), scan sorted by filename for determinism (05-02)
 
 ### Todos
 
@@ -85,8 +86,8 @@ Plan: 1 of 2 complete (05-01 search+get 24c4382 + addeb75)
 
 ## Session Continuity
 
-**Last Action:** 05-01 executed — search_notes + get_note (require_read-gated, structured returns) + 13 seeded proofs green, suite 114 passed 2 skipped
-**Next Action:** Execute Phase 05 plan 05-02 (list-notes + tags browse, READ-03/READ-04)
+**Last Action:** 05-02 executed — list_notes + get_tags (require_read-gated, metadata-only/frequency-sorted) + 9 new proofs (sweep denies bogus/missing/revoked on all four), suite 123 passed 2 skipped
+**Next Action:** Phase 05 complete — plan Phase 06 (Advanced Filtering) or verify Phase 05
 **Context Files:**
 
 - `.planning/PROJECT.md` — Project definition and constraints
