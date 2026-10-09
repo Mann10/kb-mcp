@@ -21,14 +21,14 @@ def seeded(repository):
         title="Beta Note",
         body="checker verifies plans",
         tags=["Work", "review"],
-        created="2026-01-02",
+        created="2026-02-01",
     )
     repository.write_note(
         "gamma-note.md",
         title="Gamma Report",
         body="grocery list and weekend ideas",
         tags=["personal"],
-        created="2026-01-03",
+        created="2026-03-01",
     )
     (repository.notes_dir / "bad-note.md").write_text(
         "---\ntitle: [unclosed\n---\nbroken", encoding="utf-8"
@@ -137,3 +137,77 @@ def test_get_auth_denied(token_store):
         read_tools.get_note("alpha-note", token="bogus", _store=token_store)
     with pytest.raises(AuthenticationError, match="Invalid or missing token"):
         read_tools.get_note("alpha-note", token=None, _store=token_store)
+
+
+def test_list_returns_metadata_in_created_order(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.list_notes(token=raw, _store=token_store)
+    assert [n["filename"] for n in out["notes"]] == [
+        "alpha-note",
+        "beta-note",
+        "gamma-note",
+    ]
+    for entry in out["notes"]:
+        assert set(entry.keys()) == {"filename", "title", "tags", "created"}
+        assert "body" not in entry
+    assert "Found 3 note(s)." in out["message"]
+
+
+def test_list_empty_kb(token_store, read_token_pair, tmp_path):
+    from kb_mcp.storage import NoteRepository
+
+    empty = NoteRepository(notes_dir=tmp_path / "empty-notes")
+    read_tools.configure_default_repo(empty)
+    raw, _ = read_token_pair
+    out = read_tools.list_notes(token=raw, _store=token_store)
+    assert out["notes"] == []
+    assert "No notes" in out["message"]
+
+
+def test_get_tags_counts_and_order(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.get_tags(token=raw, _store=token_store)
+    by_tag = {t["tag"]: t["count"] for t in out["tags"]}
+    assert by_tag.get("work") == 2
+    assert out["tags"][0] == {"tag": "work", "count": 2}
+    assert sum(t["count"] for t in out["tags"]) >= 4
+    assert "Found" in out["message"]
+
+
+def test_get_tags_empty_kb(token_store, read_token_pair, tmp_path):
+    from kb_mcp.storage import NoteRepository
+
+    empty = NoteRepository(notes_dir=tmp_path / "empty-tags-notes")
+    read_tools.configure_default_repo(empty)
+    raw, _ = read_token_pair
+    out = read_tools.get_tags(token=raw, _store=token_store)
+    assert out["tags"] == []
+    assert "No tags" in out["message"]
+
+
+@pytest.mark.parametrize(
+    "tool_name", ["search_notes", "get_note", "list_notes", "get_tags"]
+)
+def test_all_four_tools_deny_bogus_and_missing(token_store, tool_name):
+    def invoke(extra):
+        kwargs = dict(extra)
+        kwargs["_store"] = token_store
+        if tool_name == "search_notes":
+            return read_tools.search_notes("x", **kwargs)
+        if tool_name == "get_note":
+            return read_tools.get_note("alpha-note", **kwargs)
+        if tool_name == "list_notes":
+            return read_tools.list_notes(**kwargs)
+        return read_tools.get_tags(**kwargs)
+
+    with pytest.raises(AuthenticationError, match="Invalid or missing token"):
+        invoke({"token": "bogus"})
+    with pytest.raises(AuthenticationError, match="Invalid or missing token"):
+        invoke({})
+
+
+def test_list_revoked_token_denied(token_store, read_token_pair):
+    raw, entry = read_token_pair
+    token_store.revoke_by_prefix(entry.key_prefix[:4])
+    with pytest.raises(AuthenticationError, match="Invalid or missing token"):
+        read_tools.list_notes(token=raw, _store=token_store)

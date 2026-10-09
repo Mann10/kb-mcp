@@ -159,7 +159,7 @@ def get_tags(*, token=None, _store=None) -> dict:
         files = []
     counts: dict[str, int] = {}
     display: dict[str, str] = {}
-    for path in files:
+    for path in sorted(files, key=lambda p: p.name):
         try:
             content = path.read_text(encoding="utf-8-sig")
             metadata, _ = parse_frontmatter(content, path.name)
