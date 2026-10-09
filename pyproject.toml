@@ -13,4 +13,4 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = [{include = "kb_mcp", from = "src"}]
+packages = ["src/kb_mcp"]
