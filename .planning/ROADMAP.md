@@ -6,7 +6,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Storage Foundation** - YAML parsing, file I/O, path validation
+- [x] **Phase 1: Storage Foundation** - YAML parsing, file I/O, path validation (2026-10-09)
 - [ ] **Phase 2: Git Versioning** - Git integration for note history
 - [ ] **Phase 3: Token Model & Middleware** - Token types, storage, verification
 - [ ] **Phase 4: CLI Token Management** - Full token lifecycle (generate, revoke, list, rotate, TTL)
@@ -31,8 +31,8 @@
 
 Plans:
 - [x] 01-01-PLAN.md — Foundation: project scaffolding, error types, pydantic models, YAML frontmatter parsing
-- [ ] 01-02-PLAN.md — Storage Core: path validation, NoteRepository CRUD, atomic writes
-- [ ] 01-03-PLAN.md — Integration Tests: full lifecycle, edge cases, security tests
+- [x] 01-02-PLAN.md — Storage Core: path validation, NoteRepository CRUD, atomic writes
+- [x] 01-03-PLAN.md — Integration Tests: full lifecycle, edge cases, security tests
 
 Wave structure:
 - Wave 1: 01-01 (no dependencies)
@@ -53,7 +53,15 @@ Cross-cutting constraints:
   2. Updating an existing note creates a new git commit with the changes
   3. Deleting a note creates a git commit removing the file
   4. Git history shows a clear audit trail of all note changes
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Git collaborator: dulwich dep + fail-open git_history.py (lazy init, single-file staging, empty-commit guard)
+- [ ] 02-02-PLAN.md — Storage hooks + real-git tests: write/delete wiring, 8 STOR-03 tests
+
+Wave structure:
+- Wave 1: 02-01 (no dependencies)
+- Wave 2: 02-02 (depends on 02-01)
 
 ### Phase 3: Token Model & Middleware
 **Goal**: All tool calls are authenticated and authorized based on token type
@@ -137,7 +145,7 @@ Cross-cutting constraints:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Storage Foundation | 1/3 | In Progress | 2026-10-09 |
+| 1. Storage Foundation | 3/3 | Complete | 2026-10-09 |
 | 2. Git Versioning | 0/5 | Not started | - |
 | 3. Token Model & Middleware | 0/7 | Not started | - |
 | 4. CLI Token Management | 0/8 | Not started | - |

@@ -39,7 +39,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Storage
 
 - [x] **STOR-01**: Parse and validate YAML frontmatter metadata
-- [ ] **STOR-02**: Store notes as markdown files on disk (no database)
+- [x] **STOR-02**: Store notes as markdown files on disk (no database)
 - [ ] **STOR-03**: Git versioning integration for note history
 
 ## v2 Requirements
