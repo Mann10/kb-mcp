@@ -111,6 +111,76 @@ def search_notes(query: str, limit: int = 10, *, token=None, _store=None) -> dic
 
 
 @require_read
+def list_notes(*, token=None, _store=None) -> dict:
+    """List all notes with metadata only (no bodies), created-ascending."""
+    repo = _resolve_repo()
+    try:
+        files = [
+            p
+            for p in repo.notes_dir.iterdir()
+            if p.is_file() and p.suffix == ".md"
+        ]
+    except OSError:
+        files = []
+    pairs = []
+    for path in files:
+        try:
+            content = path.read_text(encoding="utf-8-sig")
+            metadata, _ = parse_frontmatter(content, path.name)
+        except Exception:
+            continue
+        pairs.append((metadata, path.stem))
+    pairs.sort(key=lambda item: item[0].created)
+    if not pairs:
+        return {"notes": [], "message": "No notes found."}
+    notes = [
+        {
+            "filename": stem,
+            "title": m.title,
+            "tags": list(m.tags),
+            "created": m.created,
+        }
+        for m, stem in pairs
+    ]
+    return {"notes": notes, "message": f"Found {len(notes)} note(s)."}
+
+
+@require_read
+def get_tags(*, token=None, _store=None) -> dict:
+    """Browse tags across all notes, frequency-sorted and case-normalized."""
+    repo = _resolve_repo()
+    try:
+        files = [
+            p
+            for p in repo.notes_dir.iterdir()
+            if p.is_file() and p.suffix == ".md"
+        ]
+    except OSError:
+        files = []
+    counts: dict[str, int] = {}
+    display: dict[str, str] = {}
+    for path in files:
+        try:
+            content = path.read_text(encoding="utf-8-sig")
+            metadata, _ = parse_frontmatter(content, path.name)
+        except Exception:
+            continue
+        for raw in list(metadata.tags or []):
+            norm = raw.strip().lower()
+            if not norm:
+                continue
+            counts[norm] = counts.get(norm, 0) + 1
+            display.setdefault(norm, raw.strip())
+    if not counts:
+        return {"tags": [], "message": "No tags found."}
+    tags = [
+        {"tag": display[k], "count": v}
+        for k, v in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
+    return {"tags": tags, "message": f"Found {len(tags)} tag(s)."}
+
+
+@require_read
 def get_note(title: str, *, token=None, _store=None) -> dict:
     """Retrieve a single note by case-insensitive title/stem lookup."""
     repo = _resolve_repo()
