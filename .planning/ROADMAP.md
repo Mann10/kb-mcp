@@ -96,7 +96,7 @@ Wave structure:
 
 Plans:
 - [x] 04-01-PLAN.md — Store lifecycle: TTL creation, prefix search, soft-revoke, listing, atomic rotate (+ tests/fixtures)
-- [ ] 04-02-PLAN.md — Typer CLI: generate/list/revoke/rotate, entry point, table+JSON, secrecy proofs
+- [x] 04-02-PLAN.md — Typer CLI: generate/list/revoke/rotate, entry point, table+JSON, secrecy proofs
 
 Wave structure:
 - Wave 1: 04-01 (no dependencies)

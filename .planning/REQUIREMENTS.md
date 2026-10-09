@@ -11,11 +11,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **AUTH-01**: Separate read-only and read+write tokens enforced on all tools
 - [ ] **AUTH-02**: Token verification middleware validates token on every tool call
-- [ ] **AUTH-03**: CLI tool generates new tokens with specified permission level
-- [ ] **AUTH-04**: CLI tool revokes existing tokens
-- [ ] **AUTH-05**: CLI tool lists all active tokens
-- [ ] **AUTH-06**: Token rotation revokes old token and generates new one in single step
-- [ ] **AUTH-07**: Tokens support configurable TTL with expiration enforcement
+- [x] **AUTH-03**: CLI tool generates new tokens with specified permission level
+- [x] **AUTH-04**: CLI tool revokes existing tokens
+- [x] **AUTH-05**: CLI tool lists all active tokens
+- [x] **AUTH-06**: Token rotation revokes old token and generates new one in single step
+- [x] **AUTH-07**: Tokens support configurable TTL with expiration enforcement
 
 ### Read Tools
 
@@ -71,11 +71,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | AUTH-01 | Phase 3 | Pending |
 | AUTH-02 | Phase 3 | Pending |
-| AUTH-03 | Phase 4 | Pending |
-| AUTH-04 | Phase 4 | Pending |
-| AUTH-05 | Phase 4 | Pending |
-| AUTH-06 | Phase 4 | Pending |
-| AUTH-07 | Phase 4 | Pending |
+| AUTH-03 | Phase 4 | Complete (04-02) |
+| AUTH-04 | Phase 4 | Complete (04-02) |
+| AUTH-05 | Phase 4 | Complete (04-02) |
+| AUTH-06 | Phase 4 | Complete (04-02) |
+| AUTH-07 | Phase 4 | Complete (04-02) |
 | READ-01 | Phase 5 | Pending |
 | READ-02 | Phase 5 | Pending |
 | READ-03 | Phase 5 | Pending |
