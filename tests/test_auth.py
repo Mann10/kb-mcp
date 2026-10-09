@@ -173,3 +173,99 @@ def test_update_last_used_never_blocks(token_store):
     assert token_store.lookup(raw).last_used_at is not None
     # Unknown token telemetry is a silent no-op, not an error.
     token_store.update_last_used("test-token-aaa-telemetry-unknown")
+
+
+def test_revoke_by_prefix_denies_but_keeps_entry(token_store):
+    """revoke_by_prefix soft-revokes: lookup denies but the entry is kept."""
+    from kb_mcp.auth import token_status
+
+    raw, entry = token_store.add_token(
+        username="lifecycle-user",
+        token_type=TokenType.READ,
+        raw="test-token-aaa-lifecycle-0020",
+    )
+    assert token_store.lookup(raw) is not None
+    revoked = token_store.revoke_by_prefix(entry.key_prefix[:4])
+    assert revoked.revoked_at is not None
+    assert token_store.lookup(raw) is None
+    kept = token_store.list_entries(True)
+    assert any(e.key_hash == entry.key_hash for e in kept)
+    stored = next(e for e in kept if e.key_hash == entry.key_hash)
+    assert stored.revoked_at is not None
+    assert token_status(stored) == "revoked"
+
+
+def test_prefix_no_match_raises_and_mutates_nothing(token_store):
+    """Zero prefix matches raise KeyError without mutating any entry."""
+    token_store.add_token(
+        username="nomatch-user",
+        token_type=TokenType.READ,
+        raw="test-token-aaa-nomatch-0021",
+    )
+    before = len(token_store)
+    with pytest.raises(KeyError, match="No token found"):
+        token_store.revoke_by_prefix("zzzz")
+    assert len(token_store) == before
+    assert all(e.revoked_at is None for e in token_store.list_entries(True))
+
+
+def test_prefix_ambiguous_raises_and_mutates_nothing(shared_prefix_store):
+    """Ambiguous prefix raises KeyError without mutating any entry."""
+    before = len(shared_prefix_store)
+    assert before == 2
+    with pytest.raises(KeyError, match="Ambiguous"):
+        shared_prefix_store.revoke_by_prefix("test")
+    assert len(shared_prefix_store) == before
+    assert all(e.revoked_at is None for e in shared_prefix_store.list_entries(True))
+
+
+def test_rotate_carries_identity_and_revokes_old(token_store):
+    """rotate_by_prefix revokes old, mints new carrying username+type+TTL."""
+    old_raw, old_entry = token_store.add_token(
+        username="rotate-user",
+        token_type=TokenType.READ,
+        raw="test-token-aaa-rotate-0022",
+        expires_at="2099-01-01T00:00:00+00:00",
+    )
+    old_expires = old_entry.expires_at
+    old_prefix = old_entry.key_prefix[:4]
+    new_raw, new_entry = token_store.rotate_by_prefix(old_prefix)
+    assert token_store.lookup(old_raw) is None
+    assert new_entry.username == "rotate-user"
+    assert new_entry.token_type == old_entry.token_type
+    assert new_entry.token_type == TokenType.READ
+    verified = token_store.lookup(new_raw)
+    assert verified is not None
+    assert verified.username == "rotate-user"
+    assert old_entry.revoked_at is not None
+    assert new_entry.expires_at == old_expires
+
+
+def test_add_token_with_expires_at_enforced(token_store):
+    """A past expires_at denies lookup and is excluded from active listing."""
+    from kb_mcp.auth import token_status
+
+    raw, entry = token_store.add_token(
+        username="ttl-user",
+        token_type=TokenType.READ,
+        raw="test-token-aaa-ttl-0023",
+        expires_at="2000-01-01T00:00:00+00:00",
+    )
+    assert token_store.lookup(raw) is None
+    assert token_status(entry) == "expired"
+    assert all(e.key_hash != entry.key_hash for e in token_store.list_entries())
+    assert any(e.key_hash == entry.key_hash for e in token_store.list_entries(True))
+
+
+def test_no_ttl_never_expires(token_store):
+    """Omitted expires_at means never-expires: verifies and reports active."""
+    from kb_mcp.auth import token_status
+
+    raw, entry = token_store.add_token(
+        username="nottl-user",
+        token_type=TokenType.READ,
+        raw="test-token-aaa-nottl-0024",
+    )
+    assert entry.expires_at is None
+    assert token_store.lookup(raw) is not None
+    assert token_status(entry) == "active"

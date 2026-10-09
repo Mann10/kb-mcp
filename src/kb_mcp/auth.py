@@ -179,6 +179,39 @@ class TokenStore:
         self.save()
         return entry
 
+    def rotate_by_prefix(
+        self, prefix: str, expires_at: str | None = None
+    ) -> tuple[str, TokenEntry]:
+        """Atomically revoke the matched entry and mint its replacement."""
+        matches = self.find_by_prefix(prefix)
+        if len(matches) == 0:
+            raise KeyError(f"No token found for prefix '{prefix}'.")
+        if len(matches) >= 2:
+            candidates = "; ".join(
+                f"{e.key_prefix}...{e.key_suffix} ({e.username})" for e in matches
+            )
+            raise KeyError(
+                f"Ambiguous prefix '{prefix}' matches {len(matches)} tokens. "
+                f"Use a longer prefix. {candidates}"
+            )
+        old = matches[0]
+        old.revoked_at = utc_now_iso()
+        new_raw, new_entry = self.add_token(
+            username=old.username,
+            token_type=old.token_type,
+            expires_at=(expires_at if expires_at is not None else old.expires_at),
+        )
+        logger.info(
+            "Rotated token %s...%s (user=%s) to %s...%s",
+            old.key_prefix,
+            old.key_suffix,
+            old.username,
+            new_entry.key_prefix,
+            new_entry.key_suffix,
+        )
+        self.save()
+        return (new_raw, new_entry)
+
     def list_entries(
         self, include_revoked_expired: bool = False
     ) -> list[TokenEntry]:

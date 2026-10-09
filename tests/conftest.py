@@ -85,3 +85,48 @@ def read_write_token_pair(token_store):
         username="test-writer", token_type=TokenType.READ_WRITE, raw=raw
     )
     return (raw, entry)
+
+
+@pytest.fixture
+def shared_prefix_store(token_store_path):
+    """TokenStore with two entries sharing a 4-char prefix but distinct 8-char prefixes."""
+    from kb_mcp.auth import TokenStore, TokenType
+
+    store = TokenStore(store_path=token_store_path)
+    store.add_token(
+        username="shared-alice", token_type=TokenType.READ, raw="test-aaaa-shared-0001"
+    )
+    store.add_token(
+        username="shared-bob", token_type=TokenType.READ, raw="test-bbbb-shared-0002"
+    )
+    return store
+
+
+@pytest.fixture
+def revoked_entry_store(token_store_path):
+    """TokenStore with a single entry revoked via the real revoke path."""
+    from kb_mcp.auth import TokenStore, TokenType
+
+    store = TokenStore(store_path=token_store_path)
+    _, entry = store.add_token(
+        username="revoked-user",
+        token_type=TokenType.READ,
+        raw="test-token-aaa-revoked-0010",
+    )
+    store.revoke_by_prefix(entry.key_prefix[:4])
+    return store
+
+
+@pytest.fixture
+def expired_entry_store(token_store_path):
+    """TokenStore with a single entry carrying a past expires_at."""
+    from kb_mcp.auth import TokenStore, TokenType
+
+    store = TokenStore(store_path=token_store_path)
+    store.add_token(
+        username="expired-user",
+        token_type=TokenType.READ,
+        raw="test-token-aaa-expired-0011",
+        expires_at="2000-01-01T00:00:00+00:00",
+    )
+    return store
