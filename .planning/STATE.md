@@ -9,8 +9,8 @@
 ## Current Position
 
 **Phase:** 2 (Git Versioning) — executing
-**Plan:** 0/2 plans
-**Status:** In progress (Wave 1)
+**Plan:** 1/2 plans
+**Status:** In progress (Wave 2: 02-02 hooks + tests)
 **Progress:** [x] 100% (Phase 1 complete)
 
 ## Performance Metrics
@@ -33,11 +33,16 @@
 - Filesystem as source of truth (no database)
 - dulwich for git versioning (pure Python, no git binary required)
 - Git repo lives inside NOTES_DIR; fail-open commits (git never blocks a write)
+- dulwich 1.2.17 pinned for git versioning (pure-Python, verified hands-on)
+- Git history-from-first-change: pre-existing notes commit on first post-upgrade edit, no bulk init commit (02-01)
+- NOTES_DIR repos carry a `*.tmp` .gitignore so crash-residue temp files are never stageable (02-01)
+- Single FileLocked retry (0.1s) proportionate to single-writer KB scale (02-01)
 
 ### Todos
 - [ ] Plan Phase 1: Storage Foundation
 - [x] Plan Phase 2: Git Versioning
-- [ ] Execute Phase 2: Git Versioning
+- [x] Execute Phase 2 Wave 1 (02-01 git_history collaborator — cfc17f0, eea94c7)
+- [ ] Execute Phase 2 Wave 2 (02-02 hooks + tests)
 - [ ] Plan Phase 3: Token Model & Middleware
 - [ ] Plan Phase 4: CLI Token Management
 - [ ] Plan Phase 5: Core Read Tools
@@ -51,8 +56,8 @@
 
 ## Session Continuity
 
-**Last Action:** Phase 2 planned — 02-RESEARCH.md + 02-01/02-02 PLAN.md complete, verification PASS (W-1 guarded-import fix applied)
-**Next Action:** Execute Phase 2 Wave 1 (02-01 git_history collaborator)
+**Last Action:** 02-01 executed — dulwich dep + git_history.py collaborator committed, SUMMARY created, suite green (56 passed, 2 skipped)
+**Next Action:** Execute Phase 2 Wave 2 (02-02 storage hooks + real-git tests)
 **Context Files:**
 - `.planning/PROJECT.md` — Project definition and constraints
 - `.planning/REQUIREMENTS.md` — 23 v1 requirements with traceability
