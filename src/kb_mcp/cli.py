@@ -65,8 +65,13 @@ def _status(entry) -> str:
 @app.command()
 def generate(
     username: Annotated[str, typer.Argument(help="Owner of the new token")],
-    type: Annotated[str, typer.Option("--type", help="Token permission: read or read-write")] = "read",
-    ttl: Annotated[str | None, typer.Option(help="Time-to-live like 30d, 24h, 15m, 3600")] = None,
+    type: Annotated[
+        str, typer.Option("--type", help="Token permission: read or read-write")
+    ] = "read",
+    ttl: Annotated[
+        str | None,
+        typer.Option(help="Time-to-live like 30d, 24h, 15m, 3600"),
+    ] = None,
 ) -> None:
     """Generate a new token for USERNAME (default read-only, printed once)."""
     token_type = _normalize_type(type)
@@ -84,8 +89,12 @@ def generate(
 
 @app.command(name="list")
 def list_cmd(
-    format: Annotated[str, typer.Option("--format", help="Output format: table or json")] = "table",
-    all: Annotated[bool, typer.Option("--all", help="Include revoked and expired tokens")] = False,
+    format: Annotated[
+        str, typer.Option("--format", help="Output format: table or json")
+    ] = "table",
+    all: Annotated[
+        bool, typer.Option("--all", help="Include revoked and expired tokens")
+    ] = False,
 ) -> None:
     """List active tokens (display strings only, never secrets)."""
     if format not in ("table", "json"):
@@ -117,7 +126,7 @@ def list_cmd(
             e.expires_at or "never",
             _status(e),
         )
-    Console().print(table)
+    Console(width=200).print(table)
 
 
 @app.command()
@@ -139,7 +148,10 @@ def revoke(
 @app.command()
 def rotate(
     prefix: Annotated[str, typer.Argument(help="Token prefix to rotate")],
-    ttl: Annotated[str | None, typer.Option(help="TTL for the new token (default carries over expiry)")] = None,
+    ttl: Annotated[
+        str | None,
+        typer.Option(help="TTL for the new token (default carries over expiry)"),
+    ] = None,
 ) -> None:
     """Rotate PREFIX in a single command (revoke old, print new secret once)."""
     if len(prefix.strip()) > 32:
