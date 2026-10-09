@@ -57,7 +57,7 @@ Cross-cutting constraints:
 
 Plans:
 - [x] 02-01-PLAN.md — Git collaborator: dulwich dep + fail-open git_history.py (lazy init, single-file staging, empty-commit guard)
-- [ ] 02-02-PLAN.md — Storage hooks + real-git tests: write/delete wiring, 8 STOR-03 tests
+- [x] 02-02-PLAN.md — Storage hooks + real-git tests: write/delete wiring, 8 STOR-03 tests
 
 Wave structure:
 - Wave 1: 02-01 (no dependencies)
@@ -146,7 +146,7 @@ Wave structure:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Storage Foundation | 3/3 | Complete | 2026-10-09 |
-| 2. Git Versioning | 1/2 | In Progress | - |
+| 2. Git Versioning | 2/2 | Complete | 2026-10-09 |
 | 3. Token Model & Middleware | 0/7 | Not started | - |
 | 4. CLI Token Management | 0/8 | Not started | - |
 | 5. Core Read Tools | 0/8 | Not started | - |

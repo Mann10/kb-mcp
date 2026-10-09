@@ -40,7 +40,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **STOR-01**: Parse and validate YAML frontmatter metadata
 - [x] **STOR-02**: Store notes as markdown files on disk (no database)
-- [ ] **STOR-03**: Git versioning integration for note history
+- [x] **STOR-03**: Git versioning integration for note history
 
 ## v2 Requirements
 
@@ -91,7 +91,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WRITE-07 | Phase 8 | Pending |
 | STOR-01 | Phase 1 | Complete |
 | STOR-02 | Phase 1 | Pending |
-| STOR-03 | Phase 2 | Pending |
+| STOR-03 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 23 total
