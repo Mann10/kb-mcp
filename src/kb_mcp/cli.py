@@ -1,10 +1,13 @@
 """Typer operator CLI for knowledge-base MCP token management."""
 
+import json
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import typer
+from rich.console import Console
+from rich.table import Table
 
 from kb_mcp.auth import TokenStore, TokenType, token_status
 
@@ -76,4 +79,80 @@ def generate(
         expires_at=_expires_at_from_ttl(ttl),
     )
     typer.echo(f"Token for '{entry.username}': {raw}")
+    typer.echo("Store this token securely. It will not be shown again.")
+
+
+@app.command(name="list")
+def list_cmd(
+    format: Annotated[str, typer.Option("--format", help="Output format: table or json")] = "table",
+    all: Annotated[bool, typer.Option("--all", help="Include revoked and expired tokens")] = False,
+) -> None:
+    """List active tokens (display strings only, never secrets)."""
+    if format not in ("table", "json"):
+        raise typer.BadParameter("Invalid --format: choose table or json")
+    entries = _get_store().list_entries(include_revoked_expired=all)
+    if format == "json":
+        payload = [
+            {
+                "token_display": _display(e),
+                "username": e.username,
+                "token_type": e.token_type.value,
+                "created_at": e.created_at,
+                "last_used_at": e.last_used_at,
+                "expires_at": e.expires_at,
+                "status": _status(e),
+            }
+            for e in entries
+        ]
+        typer.echo(json.dumps(payload, indent=2))
+        return
+    table = Table("token", "user", "type", "created", "last-used", "expires", "status")
+    for e in entries:
+        table.add_row(
+            _display(e),
+            e.username,
+            e.token_type.value,
+            e.created_at,
+            e.last_used_at or "-",
+            e.expires_at or "never",
+            _status(e),
+        )
+    Console().print(table)
+
+
+@app.command()
+def revoke(
+    prefix: Annotated[str, typer.Argument(help="Token prefix from list output")],
+) -> None:
+    """Revoke the token matching PREFIX (immediately invalid, entry kept)."""
+    if len(prefix.strip()) > 32:
+        typer.echo("Use a prefix from list output, not the full token.", err=True)
+        raise typer.Exit(1)
+    try:
+        entry = _get_store().revoke_by_prefix(prefix.strip())
+    except KeyError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1)
+    typer.echo(f"Revoked {_display(entry)} ({entry.username}).")
+
+
+@app.command()
+def rotate(
+    prefix: Annotated[str, typer.Argument(help="Token prefix to rotate")],
+    ttl: Annotated[str | None, typer.Option(help="TTL for the new token (default carries over expiry)")] = None,
+) -> None:
+    """Rotate PREFIX in a single command (revoke old, print new secret once)."""
+    if len(prefix.strip()) > 32:
+        typer.echo("Use a prefix from list output, not the full token.", err=True)
+        raise typer.Exit(1)
+    try:
+        new_expires = _expires_at_from_ttl(ttl) if ttl is not None else None
+        new_raw, new_entry = _get_store().rotate_by_prefix(
+            prefix.strip(), expires_at=new_expires
+        )
+    except KeyError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1)
+    typer.echo(f"Rotated {_display(new_entry)} ({new_entry.username}).")
+    typer.echo(f"New token for '{new_entry.username}': {new_raw}")
     typer.echo("Store this token securely. It will not be shown again.")
