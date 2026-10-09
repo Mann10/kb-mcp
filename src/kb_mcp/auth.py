@@ -88,6 +88,26 @@ def _parse_expiry(value: str | None) -> datetime | None:
     return parsed
 
 
+def token_status(entry: TokenEntry) -> str:
+    """Classify an entry for CLI rendering: revoked, expired, or active."""
+    if entry.revoked_at is not None:
+        return "revoked"
+    if entry.expires_at is None:
+        return "active"
+    try:
+        expiry = _parse_expiry(entry.expires_at)
+    except ValueError:
+        logger.warning(
+            "Token %s...%s has unparsable expires_at; treating as expired",
+            entry.key_prefix,
+            entry.key_suffix,
+        )
+        return "expired"
+    if expiry is not None and expiry <= datetime.now(timezone.utc):
+        return "expired"
+    return "active"
+
+
 class TokenStore:
     """JSON-backed token registry keyed by hash, hashes only on disk."""
 
@@ -110,6 +130,7 @@ class TokenStore:
         username: str,
         token_type: TokenType,
         raw: str | None = None,
+        expires_at: str | None = None,
     ) -> tuple[str, TokenEntry]:
         """Issue a token; the raw secret is returned once and never stored."""
         if raw is None:
@@ -121,10 +142,64 @@ class TokenStore:
             username=username,
             token_type=token_type,
             created_at=utc_now_iso(),
+            expires_at=expires_at,
         )
         self._entries[entry.key_hash] = entry
         self.save()
         return raw, entry
+
+    def find_by_prefix(self, prefix: str) -> list[TokenEntry]:
+        """Find entries whose display prefix starts with the given prefix."""
+        if not prefix or not prefix.strip():
+            return []
+        matches = [e for e in self._entries.values() if e.key_prefix.startswith(prefix)]
+        return sorted(matches, key=lambda e: (e.username, e.created_at))
+
+    def revoke_by_prefix(self, prefix: str) -> TokenEntry:
+        """Soft-revoke the single entry matching prefix; fail on 0 or 2+ matches."""
+        matches = self.find_by_prefix(prefix)
+        if len(matches) == 0:
+            raise KeyError(f"No token found for prefix '{prefix}'.")
+        if len(matches) >= 2:
+            candidates = "; ".join(
+                f"{e.key_prefix}...{e.key_suffix} ({e.username})" for e in matches
+            )
+            raise KeyError(
+                f"Ambiguous prefix '{prefix}' matches {len(matches)} tokens. "
+                f"Use a longer prefix. {candidates}"
+            )
+        entry = matches[0]
+        entry.revoked_at = utc_now_iso()
+        logger.info(
+            "Revoked token %s...%s (user=%s)",
+            entry.key_prefix,
+            entry.key_suffix,
+            entry.username,
+        )
+        self.save()
+        return entry
+
+    def list_entries(
+        self, include_revoked_expired: bool = False
+    ) -> list[TokenEntry]:
+        """List entries sorted by (created_at, username), optionally filtered."""
+        entries = list(self._entries.values())
+        if include_revoked_expired:
+            return sorted(entries, key=lambda e: (e.created_at, e.username))
+        now = datetime.now(timezone.utc)
+        active: list[TokenEntry] = []
+        for entry in entries:
+            if entry.revoked_at is not None:
+                continue
+            if entry.expires_at is not None:
+                try:
+                    expiry = _parse_expiry(entry.expires_at)
+                except ValueError:
+                    continue
+                if expiry is not None and expiry <= now:
+                    continue
+            active.append(entry)
+        return sorted(active, key=lambda e: (e.created_at, e.username))
 
     def lookup(self, raw: str | None) -> TokenEntry | None:
         """Return the entry for a raw token, or None on ANY failure (fail-closed)."""
