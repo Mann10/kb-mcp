@@ -9,7 +9,7 @@
 - [x] **Phase 1: Storage Foundation** - YAML parsing, file I/O, path validation (2026-10-09)
 - [ ] **Phase 2: Git Versioning** - Git integration for note history
 - [ ] **Phase 3: Token Model & Middleware** - Token types, storage, verification
-- [ ] **Phase 4: CLI Token Management** - Full token lifecycle (generate, revoke, list, rotate, TTL)
+- [x] **Phase 4: CLI Token Management** - Full token lifecycle (generate, revoke, list, rotate, TTL) (2026-10-09)
 - [ ] **Phase 5: Core Read Tools** - Search, get, list, browse tags
 - [ ] **Phase 6: Advanced Filtering** - Tag and date range filtering
 - [ ] **Phase 7: Note CRUD Operations** - Create, update, delete notes
@@ -111,7 +111,15 @@ Wave structure:
   2. AI assistant can retrieve the full content of a specific note by title
   3. AI assistant can list all notes with metadata (title, tags, date) without loading full content
   4. AI assistant can browse all tags used across notes with counts
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [x] 05-01-PLAN.md — Search + get-note tools (READ-01/READ-02, structured returns, require_read gating)
+- [ ] 05-02-PLAN.md — List + tags tools (READ-03/READ-04, counts, all-four auth-gate proofs)
+
+Wave structure:
+- Wave 1: 05-01 (no dependencies)
+- Wave 2: 05-02 (depends on 05-01, shared read_tools.py + test file)
 
 ### Phase 6: Advanced Filtering
 **Goal**: AI assistants can narrow search results by tag and date range
@@ -164,8 +172,8 @@ Wave structure:
 | 1. Storage Foundation | 3/3 | Complete | 2026-10-09 |
 | 2. Git Versioning | 2/2 | Complete | 2026-10-09 |
 | 3. Token Model & Middleware | 0/2 | Not started | - |
-| 4. CLI Token Management | 1/2 | In Progress | - |
-| 5. Core Read Tools | 0/8 | Not started | - |
+| 4. CLI Token Management | 2/2 | Complete | 2026-10-09 |
+| 5. Core Read Tools | 1/2 | In Progress | - |
 | 6. Advanced Filtering | 0/5 | Not started | - |
 | 7. Note CRUD Operations | 0/8 | Not started | - |
 | 8. Tag Management & Templates | 0/6 | Not started | - |

@@ -19,8 +19,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Read Tools
 
-- [ ] **READ-01**: Search notes by keyword returning matching snippets
-- [ ] **READ-02**: Get full note content by title
+- [x] **READ-01**: Search notes by keyword returning matching snippets
+- [x] **READ-02**: Get full note content by title
 - [ ] **READ-03**: List all notes with metadata only (title, tags, date)
 - [ ] **READ-04**: Browse all tags across notes
 - [ ] **READ-05**: Filter search results by tag
@@ -76,8 +76,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-05 | Phase 4 | Complete (04-02) |
 | AUTH-06 | Phase 4 | Complete (04-02) |
 | AUTH-07 | Phase 4 | Complete (04-02) |
-| READ-01 | Phase 5 | Pending |
-| READ-02 | Phase 5 | Pending |
+| READ-01 | Phase 5 | Complete (05-01) |
+| READ-02 | Phase 5 | Complete (05-01) |
 | READ-03 | Phase 5 | Pending |
 | READ-04 | Phase 5 | Pending |
 | READ-05 | Phase 6 | Pending |

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-10-09T16:52:00.000Z"
+status: planning
+last_updated: "2026-10-09T17:27:00.000Z"
 progress:
   total_phases: 9
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 9
-  completed_plans: 8
-  percent: 78
+  completed_plans: 9
+  percent: 100
 ---
 
 # Project State
@@ -22,11 +22,11 @@ progress:
 
 ## Current Position
 
-Phase: 04 (cli-token-management) — COMPLETE
-Plan: 2 of 2 complete (04-01 store lifecycle b42f73e + dad4c2f; 04-02 Typer CLI 0dbfe56 + b013b26 + 7ffad17)
-**Phase:** 4
-**Plan:** 2/2 complete
-**Status:** Phase 04 complete, ready for Phase 05
+Phase: 05 (core-read-tools) — IN PROGRESS
+Plan: 1 of 2 complete (05-01 search+get 24c4382 + addeb75)
+**Phase:** 5
+**Plan:** 1 of 2 complete
+**Status:** Executing
 **Progress:** [x] 100% (Phase 1 complete)
 
 ## Performance Metrics
@@ -62,6 +62,8 @@ Plan: 2 of 2 complete (04-01 store lifecycle b42f73e + dad4c2f; 04-02 Typer CLI 
 - CLI error convention: operational failures stderr + Exit(1), usage errors BadParameter (exit 2) (04-02)
 - List table uses fixed-width rich Console (width=200) so prefix...suffix renders intact when piped (04-02)
 - Rotate carries identity with no --type flag and verbatim TTL carryover unless --ttl overrides (04-02)
+- Read tools return structured dicts with message field; search ranks body > title/stem > tags-only, limit 10 default / 50 max (05-01)
+- Search enumerates .md stems via notes_dir scan + read_note per note (list_notes drops stems); get_note failures map to structured not-found (05-01)
 
 ### Todos
 
@@ -83,8 +85,8 @@ Plan: 2 of 2 complete (04-01 store lifecycle b42f73e + dad4c2f; 04-02 Typer CLI 
 
 ## Session Continuity
 
-**Last Action:** 04-02 executed — Typer CLI (generate/list/revoke/rotate, TTL, kb-mcp-tokens entry point) + 7 CliRunner proofs green, suite 101 passed 2 skipped
-**Next Action:** Phase 04 complete — plan Phase 05 (Core Read Tools) or verify Phase 04
+**Last Action:** 05-01 executed — search_notes + get_note (require_read-gated, structured returns) + 13 seeded proofs green, suite 114 passed 2 skipped
+**Next Action:** Execute Phase 05 plan 05-02 (list-notes + tags browse, READ-03/READ-04)
 **Context Files:**
 
 - `.planning/PROJECT.md` — Project definition and constraints
