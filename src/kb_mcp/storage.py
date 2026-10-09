@@ -70,12 +70,17 @@ class NoteRepository:
         validate_filename(filename)
         path = validate_path(self.notes_dir, filename)
 
+        existed = path.exists()
         content = _build_note_content(title, tags, created, body)
 
         try:
             _atomic_write(path, content)
         except Exception as e:
             raise FileIOError(filename, "write", str(e))
+
+        from .git_history import commit_note_file
+
+        commit_note_file(str(self.notes_dir), filename, "update" if existed else "create")
 
         metadata = NoteMetadata(title=title, tags=tags, created=created)
         return Note(filename=path.stem, metadata=metadata, body=body)
@@ -107,6 +112,10 @@ class NoteRepository:
             path.unlink()
         except Exception as e:
             raise FileIOError(filename, "delete", str(e))
+
+        from .git_history import commit_note_deletion
+
+        commit_note_deletion(str(self.notes_dir), filename)
 
     def update_note(
         self,
