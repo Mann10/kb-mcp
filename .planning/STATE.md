@@ -1,16 +1,32 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: executing
+last_updated: "2026-10-09T16:52:00.000Z"
+progress:
+  total_phases: 9
+  completed_phases: 3
+  total_plans: 9
+  completed_plans: 8
+  percent: 78
+---
+
 # Project State
 
 ## Project Reference
 
 **Project:** Knowledge Base MCP Server
 **Core Value:** Enable AI assistants to search and read personal notes while ensuring only authorized users can modify the knowledge base.
-**Current Focus:** Phase 2: Git Versioning COMPLETE (02-01 collaborator + 02-02 hooks & tests, STOR-03 delivered)
+**Current Focus:** Phase 04 — cli-token-management
 
 ## Current Position
 
-**Phase:** 2 (Git Versioning) — complete
-**Plan:** 2/2 plans
-**Status:** Complete (STOR-03 delivered, all SC-1..SC-4 proven)
+Phase: 04 (cli-token-management) — EXECUTING
+Plan: 1 of 2 complete (04-01 store lifecycle done, b42f73e + dad4c2f)
+**Phase:** 4
+**Plan:** 1/2 complete
+**Status:** Executing Phase 04
 **Progress:** [x] 100% (Phase 1 complete)
 
 ## Performance Metrics
@@ -23,6 +39,7 @@
 ## Accumulated Context
 
 ### Key Decisions
+
 - Separate read/write tokens for team access (read-only for team, read+write for authorized individuals)
 - YAML frontmatter + markdown body format (matches existing notes)
 - CLI token management (consistent with reference implementation)
@@ -39,8 +56,11 @@
 - Single FileLocked retry (0.1s) proportionate to single-writer KB scale (02-01)
 - Storage hooks always-on with no constructor flag; update_note untouched, D-06 delegation proven via tests (02-02)
 - Test convention: branch-agnostic walker assertions, StringIO for porcelain.log, Repos closed in finally (02-02)
+- TokenStore lifecycle: TTL stored verbatim, prefix-only matching, soft-revoke with cardinality gate, rotate carries identity with no new_type param (04-01)
+- token_status() single classifier for CLI rendering: revoked > expired > active (04-01)
 
 ### Todos
+
 - [ ] Plan Phase 1: Storage Foundation
 - [x] Plan Phase 2: Git Versioning
 - [x] Execute Phase 2 Wave 1 (02-01 git_history collaborator — cfc17f0, eea94c7)
@@ -54,13 +74,15 @@
 - [ ] Plan Phase 9: Integration & Hardening
 
 ### Blockers
+
 - None
 
 ## Session Continuity
 
-**Last Action:** 02-02 executed — storage hooks wired + 8 real-git tests green, SUMMARY created, suite green (64 passed, 2 skipped), STOR-03 complete
-**Next Action:** Verify Phase 2 (/gsd-verify-work 2), then plan Phase 3 (Token Model & Middleware)
+**Last Action:** 04-01 executed — TokenStore lifecycle (TTL/prefix/revoke/list/rotate) + 6 tests green, SUMMARY created, suite green (94 passed, 2 skipped)
+**Next Action:** Execute Phase 04 Plan 02 (Typer CLI: generate/list/revoke/rotate)
 **Context Files:**
+
 - `.planning/PROJECT.md` — Project definition and constraints
 - `.planning/REQUIREMENTS.md` — 23 v1 requirements with traceability
 - `.planning/ROADMAP.md` — 9-phase roadmap with success criteria

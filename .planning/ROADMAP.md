@@ -72,7 +72,15 @@ Wave structure:
   2. A read+write token can call both read and write tools
   3. An invalid or missing token is rejected from all tools
   4. Token verification happens on every tool call without requiring per-tool auth code
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [x] 03-01-PLAN.md — Token model + store: TokenType/scopes, hashed TokenStore, auth errors, test scaffold
+- [x] 03-02-PLAN.md — Middleware + proofs: verify_token, require_read/require_write, SC-1..SC-4 tests
+
+Wave structure:
+- Wave 1: 03-01 (no dependencies)
+- Wave 2: 03-02 (depends on 03-01)
 
 ### Phase 4: CLI Token Management
 **Goal**: Administrators can manage the full token lifecycle from the command line
@@ -84,7 +92,15 @@ Wave structure:
   3. CLI can revoke an existing token, making it immediately invalid
   4. CLI can rotate a token (revoke old, generate new) in a single command
   5. Tokens can be created with a configurable TTL and expire automatically
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [x] 04-01-PLAN.md — Store lifecycle: TTL creation, prefix search, soft-revoke, listing, atomic rotate (+ tests/fixtures)
+- [ ] 04-02-PLAN.md — Typer CLI: generate/list/revoke/rotate, entry point, table+JSON, secrecy proofs
+
+Wave structure:
+- Wave 1: 04-01 (no dependencies)
+- Wave 2: 04-02 (depends on 04-01)
 
 ### Phase 5: Core Read Tools
 **Goal**: AI assistants can discover and retrieve notes from the knowledge base
@@ -147,8 +163,8 @@ Wave structure:
 |-------|----------------|--------|-----------|
 | 1. Storage Foundation | 3/3 | Complete | 2026-10-09 |
 | 2. Git Versioning | 2/2 | Complete | 2026-10-09 |
-| 3. Token Model & Middleware | 0/7 | Not started | - |
-| 4. CLI Token Management | 0/8 | Not started | - |
+| 3. Token Model & Middleware | 0/2 | Not started | - |
+| 4. CLI Token Management | 1/2 | In Progress | - |
 | 5. Core Read Tools | 0/8 | Not started | - |
 | 6. Advanced Filtering | 0/5 | Not started | - |
 | 7. Note CRUD Operations | 0/8 | Not started | - |
