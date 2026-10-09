@@ -79,3 +79,25 @@ class FileIOError(Exception):
 
     def __str__(self) -> str:
         return f"Failed to {self.operation} note '{self.filename}': {self.original_error}"
+
+
+class AuthenticationError(Exception):
+    """Raised when a token is missing, unknown, revoked, or expired."""
+
+    def __init__(self, message: str = "Invalid or missing token."):
+        self.message = message
+        super().__init__(self.message)
+
+    def __str__(self) -> str:
+        return self.message
+
+
+class AuthorizationError(Exception):
+    """Raised when a valid token lacks the scope for an operation."""
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
+
+    def __str__(self) -> str:
+        return self.message

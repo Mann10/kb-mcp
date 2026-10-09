@@ -43,3 +43,45 @@ def sample_note_content():
         "\n"
         "This is sample note content for testing.\n"
     )
+
+
+@pytest.fixture
+def token_store_path(tmp_path):
+    """Isolated token-store file path for a single test (never shared)."""
+    return tmp_path / ".tokens.json"
+
+
+@pytest.fixture
+def token_store(token_store_path):
+    """TokenStore backed by an isolated tmp_path file.
+
+    Imports are function-local so this module stays importable before
+    src/kb_mcp/auth.py exists (Wave 0 RED affects test_auth.py only).
+    """
+    from kb_mcp.auth import TokenStore
+
+    return TokenStore(store_path=token_store_path)
+
+
+@pytest.fixture
+def read_token_pair(token_store):
+    """(raw, entry) for a READ token for user "test-reader"."""
+    from kb_mcp.auth import TokenType
+
+    raw = "test-token-aaa-reader-0001"
+    _, entry = token_store.add_token(
+        username="test-reader", token_type=TokenType.READ, raw=raw
+    )
+    return (raw, entry)
+
+
+@pytest.fixture
+def read_write_token_pair(token_store):
+    """(raw, entry) for a READ_WRITE token for user "test-writer"."""
+    from kb_mcp.auth import TokenType
+
+    raw = "test-token-aaa-writer-0002"
+    _, entry = token_store.add_token(
+        username="test-writer", token_type=TokenType.READ_WRITE, raw=raw
+    )
+    return (raw, entry)
