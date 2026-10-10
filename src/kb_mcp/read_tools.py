@@ -6,6 +6,8 @@ return structured payloads with a human-readable ``message`` field — never
 bare strings and never raised errors.
 """
 
+import datetime
+
 from .errors import NoteNotFoundError
 from .middleware import require_read
 from .parsing import parse_frontmatter  # noqa: F401  (re-exported contract import)
@@ -53,7 +55,16 @@ def search_notes(query: str = "", limit: int = 10, tag: str | None = None, date_
         limit = min(limit, MAX_LIMIT)
     q = query.strip().lower() if isinstance(query, str) else ""
     tag_active = isinstance(tag, str) and bool(tag.strip())
-    if not q and not tag_active and not date_from and not date_to:
+    df_raw = date_from.strip() if isinstance(date_from, str) and date_from.strip() else None
+    dt_raw = date_to.strip() if isinstance(date_to, str) and date_to.strip() else None
+    for bound in (df_raw, dt_raw):
+        if bound is not None:
+            try:
+                datetime.date.fromisoformat(bound)
+            except ValueError:
+                return {"results": [], "message": f"Invalid date filter value '{bound}'. Use YYYY-MM-DD."}
+    date_active = df_raw is not None or dt_raw is not None
+    if not q and not tag_active and not date_active:
         return {"results": [], "message": f"No notes found matching '{query}'."}
     try:
         stems = sorted(
@@ -81,6 +92,11 @@ def search_notes(query: str = "", limit: int = 10, tag: str | None = None, date_
             continue
         if q and not (body_hit or title_hit or tags_hit):
             continue
+        created = note.metadata.created
+        if df_raw is not None and created < df_raw:
+            continue
+        if dt_raw is not None and created > dt_raw:
+            continue
         if body_hit:
             rank = 0
             snippet = _build_snippet(body, q, hit_index)
@@ -105,7 +121,14 @@ def search_notes(query: str = "", limit: int = 10, tag: str | None = None, date_
         )
     ranked.sort(key=lambda item: (item[0], item[1]))
     results = [payload for _, _, payload in ranked[:limit]]
-    if not tag_active:
+    parts = []
+    if tag_active:
+        parts.append(f"tag='{tag.strip()}'")
+    if df_raw is not None:
+        parts.append(f"date_from='{df_raw}'")
+    if dt_raw is not None:
+        parts.append(f"date_to='{dt_raw}'")
+    if not parts:
         if not results:
             return {"results": [], "message": f"No notes found matching '{query}'."}
         count = len(results)
@@ -113,20 +136,20 @@ def search_notes(query: str = "", limit: int = 10, tag: str | None = None, date_
             "results": results,
             "message": f"Found {count} note(s) matching '{query}'.",
         }
-    tag_echo = tag.strip()
+    suffix = " [" + ", ".join(parts) + "]."
     if not results:
         if q:
-            return {"results": [], "message": f"No notes found matching '{query}' [tag='{tag_echo}']."}
-        return {"results": [], "message": f"No notes found [tag='{tag_echo}']."}
+            return {"results": [], "message": f"No notes found matching '{query}'" + suffix}
+        return {"results": [], "message": "No notes found" + suffix}
     count = len(results)
     if q:
         return {
             "results": results,
-            "message": f"Found {count} note(s) matching '{query}' [tag='{tag_echo}'].",
+            "message": f"Found {count} note(s) matching '{query}'" + suffix,
         }
     return {
         "results": results,
-        "message": f"Found {count} note(s) [tag='{tag_echo}'].",
+        "message": f"Found {count} note(s)" + suffix,
     }
 
 
