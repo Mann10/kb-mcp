@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-last_updated: "2026-10-09T17:38:16.346Z"
+last_updated: "2026-10-10T12:00:00.000Z"
 progress:
   total_phases: 9
   completed_phases: 5
@@ -25,8 +25,8 @@ progress:
 Phase: 06 (advanced-filtering) — COMPLETE
 Plan: 2 of 2 complete (06-01 tag filter df3fe4b + 4698294; 06-02 date range 7d02561 + 14f781c; review fix 8d4e5c2)
 **Phase:** 7
-**Plan:** Not started
-**Status:** Ready to plan
+**Plan:** 1 of 2 complete (07-01 create/delete tools 60f2489 + 1d3479b)
+**Status:** In progress
 **Progress:** [x] 100% (Phase 1 complete)
 
 ## Performance Metrics
@@ -68,6 +68,8 @@ Plan: 2 of 2 complete (06-01 tag filter df3fe4b + 4698294; 06-02 date range 7d02
 - Tag filter is normalized exact equality (strip().lower() ==); whitespace-only tag counts as inactive; keyword-optional browse uses 200-char leading excerpt at rank 0 (06-01)
 - Date bounds validated once via date.fromisoformat then normalized to canonical .isoformat(); lexicographic compare on validator-guaranteed ISO created; non-string bounds treated as absent (06-02)
 - Three sequential continue-guards (keyword-if-q, tag-if-active, dates-if-active) implement AND; parts-list echo names only active filters; legacy unfiltered strings byte-identical (06-02)
+- Write tools validate at the boundary with structured dicts; slug output gated by validate_filename before I/O; create success carries D-16 field set without body (07-01)
+- Delete resolves via shared _resolve_stem (stem-map + display-title fallback), tolerating .md suffix and case variants (07-01)
 
 ### Todos
 
@@ -80,6 +82,7 @@ Plan: 2 of 2 complete (06-01 tag filter df3fe4b + 4698294; 06-02 date range 7d02
 - [ ] Plan Phase 5: Core Read Tools
 - [ ] Plan Phase 6: Advanced Filtering
 - [x] Execute Phase 6 (06-01 tag filter + browse; 06-02 date range + AND combo — verification passed)
+- [x] Execute Phase 7 Plan 01 (07-01 create/delete tools — 60f2489, 1d3479b)
 - [ ] Plan Phase 7: Note CRUD Operations
 - [ ] Plan Phase 8: Tag Management & Templates
 - [ ] Plan Phase 9: Integration & Hardening
@@ -90,8 +93,8 @@ Plan: 2 of 2 complete (06-01 tag filter df3fe4b + 4698294; 06-02 date range 7d02
 
 ## Session Continuity
 
-**Last Action:** 06-02 executed — date range + AND combo + filter echo (13 new proofs), review fix 8d4e5c2, verification passed, suite 149 passed 2 skipped
-**Next Action:** Phase 06 complete — plan Phase 07 (Note CRUD Operations) or verify Phase 06
+**Last Action:** Executed 07-01 — create_note + delete_note write tools with slugify/resolve helpers and 15 seeded proofs (WRITE-01/WRITE-04)
+**Next Action:** Execute Phase 07 Plan 02 (update_note with rename) via /gsd-execute-phase 7
 **Context Files:**
 
 - `.planning/PROJECT.md` — Project definition and constraints

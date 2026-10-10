@@ -28,10 +28,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Write Tools
 
-- [ ] **WRITE-01**: Create new note with YAML frontmatter and markdown body
+- [x] **WRITE-01**: Create new note with YAML frontmatter and markdown body
 - [ ] **WRITE-02**: Update existing note content
 - [ ] **WRITE-03**: Update existing note metadata (title, tags, dates)
-- [ ] **WRITE-04**: Delete note by title
+- [x] **WRITE-04**: Delete note by title
 - [ ] **WRITE-05**: Add tags to a note
 - [ ] **WRITE-06**: Remove tags from a note
 - [ ] **WRITE-07**: Note templates for common note types (meeting, book, idea)
@@ -82,10 +82,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | READ-04 | Phase 5 | Complete (05-02) |
 | READ-05 | Phase 6 | Complete (06-01) |
 | READ-06 | Phase 6 | Complete (06-02) |
-| WRITE-01 | Phase 7 | Pending |
+| WRITE-01 | Phase 7 | Complete (07-01) |
 | WRITE-02 | Phase 7 | Pending |
 | WRITE-03 | Phase 7 | Pending |
-| WRITE-04 | Phase 7 | Pending |
+| WRITE-04 | Phase 7 | Complete (07-01) |
 | WRITE-05 | Phase 8 | Pending |
 | WRITE-06 | Phase 8 | Pending |
 | WRITE-07 | Phase 8 | Pending |

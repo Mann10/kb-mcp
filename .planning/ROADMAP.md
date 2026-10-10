@@ -149,7 +149,15 @@ Wave structure:
   3. Write-token holder can update note metadata (title, tags, dates)
   4. Write-token holder can delete a note by title
   5. All write operations validate input and reject invalid data with clear errors
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [x] 07-01-PLAN.md — Create + delete tools (WRITE-01/WRITE-04, slugify + resolve helpers, require_write)
+- [ ] 07-02-PLAN.md — Update tool + rename (WRITE-02/WRITE-03, single-commit storage rename, atomicity)
+
+Wave structure:
+- Wave 1: 07-01 (no dependencies)
+- Wave 2: 07-02 (depends on 07-01, shared write_tools.py + test file)
 
 ### Phase 8: Tag Management & Templates
 **Goal**: Write-token holders can manage tags and use templates for common note types
@@ -183,7 +191,7 @@ Wave structure:
 | 4. CLI Token Management | 2/2 | Complete | 2026-10-09 |
 | 5. Core Read Tools | 2/2 | Complete | 2026-10-09 |
 | 6. Advanced Filtering | 2/2 | Complete | 2026-10-10 |
-| 7. Note CRUD Operations | 0/8 | Not started | - |
+| 7. Note CRUD Operations | 1/2 | In Progress | - |
 | 8. Tag Management & Templates | 0/6 | Not started | - |
 | 9. Integration & Hardening | 0/7 | Not started | - |
 
