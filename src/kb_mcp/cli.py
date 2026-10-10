@@ -1,6 +1,7 @@
 """Typer operator CLI for knowledge-base MCP token management."""
 
 import json
+import os
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
@@ -168,3 +169,26 @@ def rotate(
     typer.echo(f"Rotated {_display(new_entry)} ({new_entry.username}).")
     typer.echo(f"New token for '{new_entry.username}': {new_raw}")
     typer.echo("Store this token securely. It will not be shown again.")
+
+
+@app.command()
+def serve(
+    host: Annotated[
+        str, typer.Option("--host", help="Bind host (KB_HOST honored as default)")
+    ] = "0.0.0.0",
+    port: Annotated[
+        int, typer.Option("--port", help="Bind port (KB_PORT honored as default)")
+    ] = 8000,
+    notes_dir: Annotated[
+        str | None,
+        typer.Option("--notes-dir", help="Notes directory (NOTES_DIR honored as default)"),
+    ] = None,
+) -> None:
+    """Start the Knowledge Base MCP server (streamable-http)."""
+    resolved_host = os.environ.get("KB_HOST", host)
+    resolved_port = int(os.environ.get("KB_PORT", port))
+    resolved_notes_dir = os.environ.get("NOTES_DIR", notes_dir)
+    # Lazy import so `kb-mcp-tokens` never imports fastmcp.
+    from kb_mcp.server import serve as _serve
+
+    _serve(host=resolved_host, port=resolved_port, notes_dir=resolved_notes_dir)
