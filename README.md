@@ -117,8 +117,8 @@ Startup fails fast with a clear message if `NOTES_DIR` is missing or not writabl
 
 ### 4. Connect a client
 
-Clients must send their token in the **`x-api-token` HTTP header** on every request.
-Never bake secrets into shared config files — configure the header client-side.
+Clients must send their token in the **`x-api-token` HTTP header** on every request —
+without it the server denies fail-closed. Include it in the client payload:
 
 Example `claude_desktop_config.json` (see also `claude_desktop_config.example.json`):
 
@@ -127,13 +127,17 @@ Example `claude_desktop_config.json` (see also `claude_desktop_config.example.js
   "mcpServers": {
     "knowledge-base": {
       "transport": "streamable-http",
-      "url": "http://localhost:8000/mcp"
+      "url": "http://localhost:8000/mcp",
+      "headers": {
+        "x-api-token": "<paste-your-token-here>"
+      }
     }
   }
 }
 ```
 
-Then configure your MCP client to attach `x-api-token: <secret>` to requests to that URL.
+Replace `<paste-your-token-here>` with a token from `kb-mcp generate` (shown once at
+generation time). Keep the real config file private — never commit secrets to git.
 
 ### 5. Verify it works
 
