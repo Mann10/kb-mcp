@@ -25,7 +25,7 @@ progress:
 Phase: 8 (Tag Management & Templates) — COMPLETE
 Plan: 2 of 2 complete
 **Phase:** 9
-**Plan:** 1 of 5 complete (09-01 Server foundation)
+**Plan:** 2 of 5 complete (09-01 Server foundation, 09-02 Rate limit + audit)
 **Status:** Executing Phase 9
 **Progress:** [x] 100% (Phase 1 complete)
 
@@ -75,6 +75,8 @@ Plan: 2 of 2 complete
 - Tag tools share _validate_tag_list (list-of-str, len<100, whitespace-only reject); add stores caller casing verbatim with strip().lower() dedupe, remove matches strip().lower(); both idempotent No-changes success + single note(update) commit (08-01)
 - Templates live as in-code TEMPLATES dict (meeting/book/idea with body_skeleton + default_tags); create_from_template validates name first (Unknown template listing book/idea/meeting), title first for error precedence, tags-union with seen-set dedupe, created canonicalized via fromisoformat().isoformat(); success message carries created from '<name>' template (08-02)
 - MCP server foundation: FastMCP KnowledgeBase app with 10 clean-schema wrappers delegating token+_store; serve() on streamable-http 0.0.0.0:8000 with fail-fast NOTES_DIR guard; get_request_token() stub fails closed until 09-03 (09-01)
+- Rate limiter: per-owner 30 req/60s in-memory sliding window with injectable clock; owner_key() choke point derives bucket from entry.username, empty keys raise fail-closed (09-02)
+- Audit: append-only D-15 field-set lines (timestamp user tool file) fail-open on OSError; read-light (tool only) vs write-full verbosity; mask_token() secrecy choke point; no rotation this phase (09-02)
 
 ### Todos
 
@@ -93,6 +95,7 @@ Plan: 2 of 2 complete
 - [x] Execute Phase 8 Wave 2 (08-02 templates — 979bb84, aada437)
 - [ ] Plan Phase 9: Integration & Hardening
 - [x] Execute Phase 9 Plan 09-01 (server foundation: fastmcp dep, serve entry, 10 wrappers, fail-fast, snippet — eedb710, 73f9bae, c9a04a5)
+- [x] Execute Phase 9 Plan 09-02 (rate limit + audit modules: limiter, audit log, secrecy proofs — f9755bd, 7e257ec, 31380af)
 
 ### Blockers
 
@@ -100,8 +103,8 @@ Plan: 2 of 2 complete
 
 ## Session Continuity
 
-**Last Action:** Phase 09-01 EXECUTED — server foundation with 10 wrappers, fail-fast startup, client snippet (eedb710, 73f9bae, c9a04a5), pytest 224 passed + 2 skipped
-**Next Action:** Execute Phase 9 Plan 09-02 (rate limit + audit modules, parallel wave with 09-01 — no file overlap)
+**Last Action:** Phase 09-02 EXECUTED — rate limiter + audit modules with secrecy proofs (f9755bd, 7e257ec, 31380af), pytest 234 passed + 2 skipped
+**Next Action:** Execute Phase 9 Plan 09-03 (transport auth + error mapping wiring 09-01 + 09-02)
 **Context Files:**
 
 - `.planning/PROJECT.md` — Project definition and constraints
