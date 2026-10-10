@@ -1,6 +1,7 @@
 """NoteRepository class with full CRUD operations and atomic writes."""
 
 import os
+import re
 from io import StringIO
 from pathlib import Path
 
@@ -31,6 +32,18 @@ def _atomic_write(path: Path, content: str) -> None:
         if temp_path.exists():
             temp_path.unlink()
         raise
+
+
+def _slugify_stem(title: str) -> str | None:
+    """Slug a display title to a safe stem (no ``.md`` suffix), or None."""
+    s = title.strip().lower()
+    s = re.sub(r"\s+", "-", s)
+    s = re.sub(r"[^a-z0-9_-]", "", s)
+    s = re.sub(r"-{2,}", "-", s)
+    s = s.strip("-_")
+    if not s:
+        return None
+    return s
 
 
 class NoteRepository:
@@ -125,11 +138,51 @@ class NoteRepository:
         tags: list[str] | None = None,
         created: str | None = None,
     ) -> Note:
+        from .errors import InvalidTypeError
+
         existing = self.read_note(filename)
 
-        new_title = title if title is not None else existing.metadata.title
+        new_title = title.strip() if title is not None else existing.metadata.title
         new_body = body if body is not None else existing.body
         new_tags = tags if tags is not None else existing.metadata.tags
         new_created = created if created is not None else existing.metadata.created
 
-        return self.write_note(filename, new_title, new_body, new_tags, new_created)
+        # Validate immediately: pydantic ValueError propagates to tool layer.
+        validated = NoteMetadata(title=new_title, tags=new_tags, created=new_created)
+
+        if title is None:
+            return self.write_note(filename, validated.title, new_body, validated.tags, validated.created)
+
+        new_stem = _slugify_stem(title)
+        if new_stem is None:
+            raise InvalidTypeError(filename, "title", "safe lowercase-with-hyphens .md", title)
+        validate_filename(new_stem + ".md")
+
+        old_stem = Path(filename).stem
+        if new_stem == old_stem:
+            return self.write_note(filename, validated.title, new_body, validated.tags, validated.created)
+
+        if (self.notes_dir / (new_stem + ".md")).exists():
+            raise FileExistsError(f"rename target '{new_stem}' already exists")
+
+        new_content = _build_note_content(validated.title, validated.tags, validated.created, new_body)
+        new_path = validate_path(self.notes_dir, new_stem + ".md")
+        try:
+            _atomic_write(new_path, new_content)
+        except Exception as e:
+            from .errors import FileIOError
+
+            raise FileIOError(new_stem + ".md", "write", str(e))
+        old_path = validate_path(self.notes_dir, filename)
+        try:
+            old_path.unlink()
+        except Exception as e:
+            from .errors import FileIOError
+
+            raise FileIOError(filename, "delete", str(e))
+
+        from .git_history import commit_note_rename
+
+        commit_note_rename(str(self.notes_dir), filename, new_stem + ".md")
+
+        return Note(filename=new_stem, metadata=validated, body=new_body)

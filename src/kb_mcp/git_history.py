@@ -102,3 +102,34 @@ def commit_note_deletion(repo_path: str, filename: str) -> None:
         )
     except Exception as e:  # noqa: BLE001 — fail-open is the spec (D-13)
         logger.warning("git commit failed for %s: %s: %s", filename, type(e).__name__, e)
+
+
+def commit_note_rename(repo_path: str, old_filename: str, new_filename: str) -> None:
+    """Stage a rename (add new + remove old) and commit once. Never raises."""
+    try:
+        if porcelain is None:
+            logger.warning("dulwich unavailable, skipping git commit for %s", new_filename)
+            return
+        repo_arg = str(repo_path)
+        ensure_repo(repo_arg)
+        try:
+            porcelain.add(repo_arg, paths=[new_filename])
+        except FileLocked:
+            time.sleep(0.1)
+            porcelain.add(repo_arg, paths=[new_filename])
+        try:
+            porcelain.remove(repo_arg, paths=[old_filename])
+        except FileLocked:
+            time.sleep(0.1)
+            porcelain.remove(repo_arg, paths=[old_filename])
+        staged = porcelain.status(repo_arg).staged
+        if not (staged["add"] or staged["delete"] or staged["modify"]):
+            return
+        porcelain.commit(
+            repo_arg,
+            message=f"note(update): {Path(new_filename).stem}".encode(),
+            author=AUTHOR,
+            committer=COMMITTER,
+        )
+    except Exception as e:  # noqa: BLE001 — fail-open is the spec (D-13)
+        logger.warning("git commit failed for %s: %s: %s", new_filename, type(e).__name__, e)
