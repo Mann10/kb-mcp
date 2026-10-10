@@ -19,6 +19,7 @@ from .middleware import (
     require_write,
 )
 from .storage import NoteRepository
+from .templates import get_template_store
 from .validation import validate_filename
 
 _default_repo: NoteRepository | None = None
@@ -345,22 +346,6 @@ def remove_tags(title: str, tags: list[str], *, token=None, _store=None) -> dict
     }
 
 
-TEMPLATES = {
-    "meeting": {
-        "default_tags": ["meeting"],
-        "body_skeleton": "# Meeting Notes\n\n## Attendees\n\n- \n\n## Agenda\n\n- \n\n## Notes\n\n\n## Action Items\n\n- [ ] \n",
-    },
-    "book": {
-        "default_tags": ["book"],
-        "body_skeleton": "# Book Notes\n\n## Summary\n\n\n## Key Takeaways\n\n- \n\n## Quotes\n\n> \n\n## Rating\n\n_Notes: /5_\n",
-    },
-    "idea": {
-        "default_tags": ["idea"],
-        "body_skeleton": "# Idea\n\n## Idea\n\n\n## Why\n\n\n## Next Steps\n\n- [ ] \n",
-    },
-}
-
-
 @require_write
 def create_from_template(
     template: str,
@@ -374,10 +359,11 @@ def create_from_template(
 ) -> dict:
     """Create a new note from a template skeleton with override merge (D-09..D-16)."""
     repo = _resolve_repo()
+    tstore = get_template_store()
     norm = template.strip().lower() if isinstance(template, str) else ""
-    if norm not in TEMPLATES:
-        return {"success": False, "message": f"Unknown template '{template}'. Valid templates: book, idea, meeting."}
-    spec = TEMPLATES[norm]
+    if tstore.get(norm) is None:
+        return {"success": False, "message": f"Unknown template '{template}'. Valid templates: {', '.join(tstore.names())}."}
+    spec = tstore.get(norm)
     effective_body = body if body is not None else spec["body_skeleton"]
     effective_tags = list(spec["default_tags"])
     if not isinstance(title, str) or not title.strip():

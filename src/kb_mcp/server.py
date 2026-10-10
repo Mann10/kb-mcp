@@ -182,6 +182,10 @@ from kb_mcp.read_tools import get_note as _get_note_gated
 from kb_mcp.read_tools import get_tags as _get_tags_gated
 from kb_mcp.read_tools import list_notes as _list_notes_gated
 from kb_mcp.read_tools import search_notes as _search_notes_gated
+from kb_mcp.templates import create_template as _create_template_gated
+from kb_mcp.templates import delete_template as _delete_template_gated
+from kb_mcp.templates import list_templates as _list_templates_gated
+from kb_mcp.templates import update_template as _update_template_gated
 from kb_mcp.write_tools import add_tags as _add_tags_gated
 from kb_mcp.write_tools import create_from_template as _create_from_template_gated
 from kb_mcp.write_tools import create_note as _create_note_gated
@@ -318,6 +322,59 @@ def create_from_template(
         {"template": template, "title": title, "body": body, "tags": tags, "created": created},
         is_write=True,
         filename_of=lambda r: r.get("filename", "create_from_template"),
+    )
+
+
+@mcp.tool()
+def list_templates() -> dict:
+    """List all note templates with skeletons and default tags."""
+    return _invoke("list_templates", _list_templates_gated, TokenStore.load(), {}, is_write=False)
+
+
+@mcp.tool()
+def create_template(
+    name: str,
+    body_skeleton: str = "",
+    default_tags: list[str] | None = None,
+) -> dict:
+    """Create a note template; reject duplicates with a structured exists-error."""
+    return _invoke(
+        "create_template",
+        _create_template_gated,
+        TokenStore.load(),
+        {"name": name, "body_skeleton": body_skeleton, "default_tags": default_tags},
+        is_write=True,
+        filename_of=lambda r: r.get("name", "create_template"),
+    )
+
+
+@mcp.tool()
+def update_template(
+    name: str,
+    body_skeleton: str | None = None,
+    default_tags: list[str] | None = None,
+) -> dict:
+    """Partially update a note template; no-op update is success."""
+    return _invoke(
+        "update_template",
+        _update_template_gated,
+        TokenStore.load(),
+        {"name": name, "body_skeleton": body_skeleton, "default_tags": default_tags},
+        is_write=True,
+        filename_of=lambda r: r.get("name", "update_template"),
+    )
+
+
+@mcp.tool()
+def delete_template(name: str) -> dict:
+    """Delete a note template by name."""
+    return _invoke(
+        "delete_template",
+        _delete_template_gated,
+        TokenStore.load(),
+        {"name": name},
+        is_write=True,
+        filename_of=lambda r: r.get("name", "delete_template"),
     )
 
 
