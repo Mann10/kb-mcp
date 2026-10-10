@@ -23,8 +23,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **READ-02**: Get full note content by title
 - [x] **READ-03**: List all notes with metadata only (title, tags, date)
 - [x] **READ-04**: Browse all tags across notes
-- [ ] **READ-05**: Filter search results by tag
-- [ ] **READ-06**: Filter search results by date range
+- [x] **READ-05**: Filter search results by tag
+- [x] **READ-06**: Filter search results by date range
 
 ### Write Tools
 
@@ -80,8 +80,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | READ-02 | Phase 5 | Complete (05-01) |
 | READ-03 | Phase 5 | Complete (05-02) |
 | READ-04 | Phase 5 | Complete (05-02) |
-| READ-05 | Phase 6 | Pending |
-| READ-06 | Phase 6 | Pending |
+| READ-05 | Phase 6 | Complete (06-01) |
+| READ-06 | Phase 6 | Complete (06-02) |
 | WRITE-01 | Phase 7 | Pending |
 | WRITE-02 | Phase 7 | Pending |
 | WRITE-03 | Phase 7 | Pending |

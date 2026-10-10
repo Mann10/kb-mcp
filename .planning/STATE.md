@@ -22,9 +22,9 @@ progress:
 
 ## Current Position
 
-Phase: 05 (core-read-tools) — COMPLETE
-Plan: 2 of 2 complete (05-01 search+get 24c4382 + addeb75; 05-02 list+tags 5413b10 + db86e19)
-**Phase:** 6
+Phase: 06 (advanced-filtering) — COMPLETE
+Plan: 2 of 2 complete (06-01 tag filter df3fe4b + 4698294; 06-02 date range 7d02561 + 14f781c; review fix 8d4e5c2)
+**Phase:** 7
 **Plan:** Not started
 **Status:** Ready to plan
 **Progress:** [x] 100% (Phase 1 complete)
@@ -65,6 +65,9 @@ Plan: 2 of 2 complete (05-01 search+get 24c4382 + addeb75; 05-02 list+tags 5413b
 - Read tools return structured dicts with message field; search ranks body > title/stem > tags-only, limit 10 default / 50 max (05-01)
 - Search enumerates .md stems via notes_dir scan + read_note per note (list_notes drops stems); get_note failures map to structured not-found (05-01)
 - list_notes rescans notes_dir for stems (NoteMetadata carries none), created-ascending, metadata-only entries; get_tags counts case-normalized with first-seen display, sorted (-count, tag), scan sorted by filename for determinism (05-02)
+- Tag filter is normalized exact equality (strip().lower() ==); whitespace-only tag counts as inactive; keyword-optional browse uses 200-char leading excerpt at rank 0 (06-01)
+- Date bounds validated once via date.fromisoformat then normalized to canonical .isoformat(); lexicographic compare on validator-guaranteed ISO created; non-string bounds treated as absent (06-02)
+- Three sequential continue-guards (keyword-if-q, tag-if-active, dates-if-active) implement AND; parts-list echo names only active filters; legacy unfiltered strings byte-identical (06-02)
 
 ### Todos
 
@@ -76,6 +79,7 @@ Plan: 2 of 2 complete (05-01 search+get 24c4382 + addeb75; 05-02 list+tags 5413b
 - [ ] Plan Phase 4: CLI Token Management
 - [ ] Plan Phase 5: Core Read Tools
 - [ ] Plan Phase 6: Advanced Filtering
+- [x] Execute Phase 6 (06-01 tag filter + browse; 06-02 date range + AND combo — verification passed)
 - [ ] Plan Phase 7: Note CRUD Operations
 - [ ] Plan Phase 8: Tag Management & Templates
 - [ ] Plan Phase 9: Integration & Hardening
@@ -86,8 +90,8 @@ Plan: 2 of 2 complete (05-01 search+get 24c4382 + addeb75; 05-02 list+tags 5413b
 
 ## Session Continuity
 
-**Last Action:** 05-02 executed — list_notes + get_tags (require_read-gated, metadata-only/frequency-sorted) + 9 new proofs (sweep denies bogus/missing/revoked on all four), suite 123 passed 2 skipped
-**Next Action:** Phase 05 complete — plan Phase 06 (Advanced Filtering) or verify Phase 05
+**Last Action:** 06-02 executed — date range + AND combo + filter echo (13 new proofs), review fix 8d4e5c2, verification passed, suite 149 passed 2 skipped
+**Next Action:** Phase 06 complete — plan Phase 07 (Note CRUD Operations) or verify Phase 06
 **Context Files:**
 
 - `.planning/PROJECT.md` — Project definition and constraints

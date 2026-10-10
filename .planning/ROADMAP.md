@@ -11,7 +11,7 @@
 - [ ] **Phase 3: Token Model & Middleware** - Token types, storage, verification
 - [x] **Phase 4: CLI Token Management** - Full token lifecycle (generate, revoke, list, rotate, TTL) (2026-10-09)
 - [x] **Phase 5: Core Read Tools** - Search, get, list, browse tags (2026-10-09)
-- [ ] **Phase 6: Advanced Filtering** - Tag and date range filtering
+- [x] **Phase 6: Advanced Filtering** - Tag and date range filtering (2026-10-10)
 - [ ] **Phase 7: Note CRUD Operations** - Create, update, delete notes
 - [ ] **Phase 8: Tag Management & Templates** - Tag operations, note templates
 - [ ] **Phase 9: Integration & Hardening** - Rate limiting, error handling, audit logging, E2E
@@ -129,7 +129,15 @@ Wave structure:
   1. Search results can be filtered to only include notes with a specific tag
   2. Search results can be filtered to only include notes within a date range
   3. Combined filters (keyword + tag + date) work together correctly
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [x] 06-01-PLAN.md — Tag filter + keyword-optional browse (READ-05, normalized exact equality)
+- [x] 06-02-PLAN.md — Date range + AND combo + filter echo (READ-06, inclusive open-ended)
+
+Wave structure:
+- Wave 1: 06-01 (no dependencies)
+- Wave 2: 06-02 (depends on 06-01, shared read_tools.py + test file)
 
 ### Phase 7: Note CRUD Operations
 **Goal**: Write-token holders can create, update, and delete notes
@@ -174,7 +182,7 @@ Wave structure:
 | 3. Token Model & Middleware | 0/2 | Not started | - |
 | 4. CLI Token Management | 2/2 | Complete | 2026-10-09 |
 | 5. Core Read Tools | 2/2 | Complete | 2026-10-09 |
-| 6. Advanced Filtering | 0/5 | Not started | - |
+| 6. Advanced Filtering | 2/2 | Complete | 2026-10-10 |
 | 7. Note CRUD Operations | 0/8 | Not started | - |
 | 8. Tag Management & Templates | 0/6 | Not started | - |
 | 9. Integration & Hardening | 0/7 | Not started | - |
