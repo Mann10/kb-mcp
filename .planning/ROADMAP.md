@@ -193,7 +193,7 @@ Plans:
 - [x] 09-01-PLAN.md — Server foundation: fastmcp dep, kb-mcp serve entry, 10 tool wrappers, fail-fast startup, Claude Desktop snippet
 - [x] 09-02-PLAN.md — Rate limit + audit modules: per-owner 30/60s limiter, append-only audit log, secrecy proofs
 - [x] 09-03-PLAN.md — Transport auth + error mapping: x-api-token header, fail-closed context, rate/audit wiring, structured errors
-- [ ] 09-04-PLAN.md — E2E proofs: booted-server real-protocol tests for SC-1..SC-5 (transport half)
+- [x] 09-04-PLAN.md — E2E proofs: booted-server real-protocol tests for SC-1..SC-5 (transport half)
 - [ ] 09-05-PLAN.md — Human checkpoint: live Claude Desktop connection proving SC-5
 
 Wave structure:
@@ -214,7 +214,7 @@ Wave structure:
 | 6. Advanced Filtering | 2/2 | Complete | 2026-10-10 |
 | 7. Note CRUD Operations | 2/2 | Complete | 2026-10-10 |
 | 8. Tag Management & Templates | 2/2 | Complete    | 2026-10-10 |
-| 9. Integration & Hardening | 3/5 | In Progress | - |
+| 9. Integration & Hardening | 4/5 | In Progress | - |
 
 ## Coverage
 

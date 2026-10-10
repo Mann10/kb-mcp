@@ -25,7 +25,7 @@ progress:
 Phase: 8 (Tag Management & Templates) — COMPLETE
 Plan: 2 of 2 complete
 **Phase:** 9
-**Plan:** 3 of 5 complete (09-01 Server foundation, 09-02 Rate limit + audit, 09-03 Transport auth + error mapping)
+**Plan:** 4 of 5 complete (09-01 Server foundation, 09-02 Rate limit + audit, 09-03 Transport auth + error mapping, 09-04 Booted-server E2E)
 **Status:** Executing Phase 9
 **Progress:** [x] 100% (Phase 1 complete)
 
@@ -78,6 +78,7 @@ Plan: 2 of 2 complete
 - Rate limiter: per-owner 30 req/60s in-memory sliding window with injectable clock; owner_key() choke point derives bucket from entry.username, empty keys raise fail-closed (09-02)
 - Audit: append-only D-15 field-set lines (timestamp user tool file) fail-open on OSError; read-light (tool only) vs write-full verbosity; mask_token() secrecy choke point; no rotation this phase (09-02)
 - Transport auth: get_request_token() reads x-api-token via FastMCP context vars (3 ordered probes, fail-closed None — deliberate deny vs reference log-and-continue per D-09); single _invoke() choke point runs verify→owner-keyed-rate→invoke with locked denial strings, masked logging, traceback-free Internal-error payloads; wrappers are single-line delegations with clean schemas; TokenStore.load() per call (09-03)
+- Booted-server E2E: module-scoped live_server fixture spawns kb-mcp serve on a free port with tmp env isolation; per-call Client sessions via StreamableHttpTransport headers; SC-1 reads/writes, SC-2 trip on dedicated flood token, SC-3 audit lines, SC-4 serialized-payload Traceback blanket rule (09-04)
 
 ### Todos
 
@@ -98,6 +99,7 @@ Plan: 2 of 2 complete
 - [x] Execute Phase 9 Plan 09-01 (server foundation: fastmcp dep, serve entry, 10 wrappers, fail-fast, snippet — eedb710, 73f9bae, c9a04a5)
 - [x] Execute Phase 9 Plan 09-02 (rate limit + audit modules: limiter, audit log, secrecy proofs — f9755bd, 7e257ec, 31380af)
 - [x] Execute Phase 9 Plan 09-03 (transport auth + error mapping: header auth, _invoke pipeline, 9 wrapper proofs — 7056ea7, c898cb5)
+- [x] Execute Phase 9 Plan 09-04 (booted-server E2E: harness + SC-1..SC-4 proofs over real protocol — 7d0d5ec, 706eeeb)
 
 ### Blockers
 
@@ -105,8 +107,8 @@ Plan: 2 of 2 complete
 
 ## Session Continuity
 
-**Last Action:** Phase 09-03 EXECUTED — header auth + _invoke pipeline with 9 wrapper proofs (7056ea7, c898cb5), pytest 243 passed + 2 skipped
-**Next Action:** Execute Phase 9 Plan 09-04 (booted-server E2E proofs over real MCP protocol)
+**Last Action:** Phase 09-04 EXECUTED — booted-server E2E harness + SC-1..SC-4 proofs (7d0d5ec, 706eeeb), pytest 250 passed + 2 skipped
+**Next Action:** Execute Phase 9 Plan 09-05 (human checkpoint: live Claude Desktop connection proving SC-5)
 **Context Files:**
 
 - `.planning/PROJECT.md` — Project definition and constraints
