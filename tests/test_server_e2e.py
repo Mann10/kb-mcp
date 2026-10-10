@@ -205,3 +205,104 @@ def test_smoke_unauthenticated_call_denied(live_server):
     base_url, _, _ = live_server
     payload = call_tool(base_url, "list_notes", {}, None)
     assert payload == {"success": False, "message": "Invalid or missing token."}
+
+
+def _assert_no_traceback(payload: dict) -> None:
+    """SC-4 blanket rule: no traceback text in any serialized response."""
+    assert "Traceback" not in json.dumps(payload)
+
+
+def test_e2e_reads_through_protocol(live_server):
+    """SC-1 reads: search/get/list/tags succeed over MCP with a read token."""
+    base_url, raws, _ = live_server
+    reader = raws["reader"]
+
+    found = call_tool(base_url, "search_notes", {"query": "wombat-signal"}, reader)
+    _assert_no_traceback(found)
+    assert any(r.get("filename") == "alpha" for r in found.get("results", []))
+
+    note = call_tool(base_url, "get_note", {"title": "Beta"}, reader)
+    _assert_no_traceback(note)
+    assert note.get("found") is True
+    assert BETA_BODY in (note.get("body") or "")
+
+    listed = call_tool(base_url, "list_notes", {}, reader)
+    _assert_no_traceback(listed)
+    assert len(listed.get("notes", [])) == 2
+
+    tags = call_tool(base_url, "get_tags", {}, reader)
+    _assert_no_traceback(tags)
+    tag_names = [t.get("tag") if isinstance(t, dict) else t for t in tags.get("tags", [])]
+    assert "e2e" in tag_names
+
+
+def test_e2e_writes_and_audit_lines(live_server):
+    """SC-1 writes + SC-3 audit: real MCP writes append audit lines."""
+    base_url, raws, paths = live_server
+    writer = raws["writer"]
+
+    created = call_tool(
+        base_url, "create_note",
+        {"title": "E2E Gamma", "body": "gamma body", "tags": ["e2e"]}, writer,
+    )
+    _assert_no_traceback(created)
+    assert created.get("success") is True
+
+    audit_text = paths["audit"].read_text(encoding="utf-8")
+    assert "user=e2e-writer" in audit_text
+    assert "tool=create_note" in audit_text
+    assert "file=e2e-gamma" in audit_text
+
+    tagged = call_tool(base_url, "add_tags", {"title": "E2E Gamma", "tags": ["extra"]}, writer)
+    _assert_no_traceback(tagged)
+    assert tagged.get("success") is True
+
+    audit_lines = paths["audit"].read_text(encoding="utf-8").splitlines()
+    assert any("tool=add_tags" in line for line in audit_lines)
+
+
+def test_e2e_scope_and_missing_token_denials(live_server):
+    """Locked denials over protocol: read-token-on-write + missing token."""
+    base_url, raws, _ = live_server
+
+    scoped = call_tool(base_url, "delete_note", {"title": "Beta"}, raws["reader"])
+    _assert_no_traceback(scoped)
+    assert scoped.get("success") is False
+    assert scoped.get("message") == "Write access required. Use a write token or contact the owner."
+    assert raws["reader"] not in json.dumps(scoped)
+
+    missing = call_tool(base_url, "get_note", {"title": "Beta"}, None)
+    _assert_no_traceback(missing)
+    assert missing.get("message") == "Invalid or missing token."
+
+
+def test_e2e_rate_limit_trip(live_server):
+    """SC-2: the per-owner trip fires over the protocol on a dedicated token."""
+    base_url, raws, _ = live_server
+    flood = raws["flood"]
+    tripped_at = None
+    for attempt in range(1, 36):
+        payload = call_tool(base_url, "get_tags", {}, flood)
+        _assert_no_traceback(payload)
+        message = payload.get("message") or ""
+        if "Rate limit" in message:
+            tripped_at = attempt
+            assert "60" in message
+            break
+    assert tripped_at is not None, "rate trip never fired within 35 calls"
+
+
+def test_e2e_client_safe_errors(live_server):
+    """SC-4: expected failures are structured, messaged, and traceback-free."""
+    base_url, raws, _ = live_server
+    writer = raws["writer"]
+
+    missing = call_tool(base_url, "get_note", {"title": "No Such Note XYZ"}, writer)
+    assert missing.get("found") is False
+    assert "not found" in (missing.get("message") or "").lower()
+    _assert_no_traceback(missing)
+
+    invalid = call_tool(base_url, "create_note", {"title": ""}, writer)
+    assert invalid.get("success") is False
+    assert "Invalid title" in (invalid.get("message") or "")
+    _assert_no_traceback(invalid)
