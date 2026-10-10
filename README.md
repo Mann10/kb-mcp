@@ -10,16 +10,17 @@ authorized individuals can modify it** via scoped tokens.
 
 ## Features
 
-- **10 MCP tools** — 4 read, 6 write (see [MCP tools](#mcp-tools))
+- **14 MCP tools** — 5 read, 9 write (see [MCP tools](#mcp-tools))
 - **Scoped token auth** — `read` vs `read-write` tokens, hash-only storage, fail-closed on every call
 - **Transport auth** — clients send the token in the `x-api-token` HTTP header; tool schemas stay clean
 - **Rate limiting** — 30 requests / 60 s sliding window, keyed per token owner
 - **Audit logging** — append-only `timestamp user tool file` lines, fail-open (audit never blocks a write)
 - **Git versioning** — every write auto-commits via [dulwich](https://www.dulwich.io/) (pure Python, no git binary); fail-open
 - **Atomic writes** — crash-safe temp-file + rename; path-traversal protection; slugified filenames
-- **Note templates** — `meeting`, `book`, `idea` skeletons for quick capture
+- **Note templates** — `meeting`, `book`, `idea` skeletons for quick capture,
+  plus full CRUD (`list/create/update/delete_template`) backed by a persistent registry
 - **Token CLI** — `generate`, `list`, `revoke`, `rotate` (+ `serve`)
-- **252 tests** — unit, integration, and live booted-server end-to-end proofs
+- **296 tests** — unit, integration, and live booted-server end-to-end proofs
 
 ## Prerequisites
 
@@ -142,7 +143,7 @@ generation time). Keep the real config file private — never commit secrets to 
 ### 5. Verify it works
 
 ```powershell
-# Run the full test suite (252 tests)
+# Run the full test suite (296 tests)
 pytest
 
 # Smoke-test token auth + tools without a client (Python REPL)
@@ -163,6 +164,7 @@ valid token; write tools need a `read-write` token.
 | `get_note` | `(title)` | Full note content by case-insensitive title/stem lookup (tolerates `.md` suffix and case variants). |
 | `list_notes` | `()` | All notes, metadata only (no bodies), created-ascending. |
 | `get_tags` | `()` | All tags with counts, sorted by `(-count, tag)`; first-seen casing displayed, counting is case-normalized. |
+| `list_templates` | `()` | All templates (name, default tags, body skeleton), name-sorted. |
 
 ### Write tools (`read-write` token only)
 
@@ -173,7 +175,10 @@ valid token; write tools need a `read-write` token.
 | `delete_note` | `(title)` | Delete by title/stem (same tolerant resolution as `get_note`). |
 | `add_tags` | `(title, tags)` | Idempotent merge — caller casing stored verbatim, dedupe is case-insensitive; no-changes is still success. |
 | `remove_tags` | `(title, tags)` | Idempotent removal (case-insensitive match); no-changes is still success. |
-| `create_from_template` | `(template, title, body=None, tags=None, created=None)` | Create from a skeleton; `template` is one of `meeting`, `book`, `idea`. Supplied tags union with template defaults (dedupe, order-preserving). |
+| `create_from_template` | `(template, title, body=None, tags=None, created=None)` | Create from a skeleton; `template` is any template in the registry (built-ins: `meeting`, `book`, `idea`). Supplied tags union with template defaults (dedupe, order-preserving). |
+| `create_template` | `(name, body_skeleton="", default_tags=None)` | Create a template; names normalize to lowercase `[a-z0-9_-]`; duplicates rejected with a structured exists-error. |
+| `update_template` | `(name, body_skeleton=None, default_tags=None)` | Partial update of a template (body and/or tags); no-op update is success. Missing names return the valid-templates list. |
+| `delete_template` | `(name)` | Delete a template by name (case/whitespace-tolerant); notes already created from it are unaffected. |
 
 ## CLI reference
 
@@ -218,6 +223,7 @@ Validation rules (`NoteMetadata`, strict Pydantic model):
 |---|---|---|---|
 | `NOTES_DIR` | server, tools | `~/knowledge-base/notes` | Notes directory (must already exist and be writable). |
 | `KB_TOKENS_FILE` | auth, CLI | platform app-data / home-based store | Token store JSON path. |
+| `KB_TEMPLATES_FILE` | templates, server | `~/knowledge-base/templates.json` | Template registry JSON path (seeded with built-ins on first run). |
 | `KB_AUDIT_FILE` | audit log | `~/knowledge-base/mcp_audit.log` | Append-only audit log path. |
 | `KB_HOST` | `serve` | `0.0.0.0` | Bind host override. |
 | `KB_PORT` | `serve` | `8000` | Bind port override. |
@@ -230,7 +236,7 @@ denial, never pass-through).
 ```powershell
 # Install dev deps + run tests
 uv sync --extra dev
-pytest                 # full suite (252 tests)
+pytest                 # full suite (296 tests)
 pytest tests/test_server_e2e.py   # live booted-server protocol proofs
 pytest -q tests/test_read_tools.py  # single file
 ```
@@ -245,12 +251,13 @@ and `src/kb_mcp/` for the implementation.
 ├── pyproject.toml                    # kb-mcp 0.1.0, Python ≥3.12, hatchling; scripts kb-mcp / kb-mcp-tokens
 ├── claude_desktop_config.example.json# streamable-http client snippet (http://localhost:8000/mcp)
 ├── src/kb_mcp/
-│   ├── server.py       # FastMCP app, 10 thin wrappers, x-api-token auth, rate-limit + audit pipeline, serve()
+│   ├── server.py       # FastMCP app, 14 thin wrappers, x-api-token auth, rate-limit + audit pipeline, serve()
 │   ├── cli.py          # Typer operator CLI (generate/list/revoke/rotate/serve)
 │   ├── auth.py         # Token model, hash-only TokenStore, verify, TTL, rotate, token_status
 │   ├── middleware.py   # require_read / require_write decorators, locked denial strings
 │   ├── read_tools.py   # search_notes / get_note / list_notes / get_tags (gated)
-│   ├── write_tools.py  # create/update/delete/tag/template tools (gated) + templates dict
+│   ├── templates.py    # TemplateStore registry + list/create/update/delete_template (gated)
+│   ├── write_tools.py  # create/update/delete/tag tools (gated); create_from_template reads the template registry
 │   ├── storage.py      # Filesystem source of truth, atomic writes, slugify, traversal guard
 │   ├── parsing.py      # YAML frontmatter parsing (ruamel.yaml round-trip safe)
 │   ├── models.py       # NoteMetadata / Note (strict Pydantic validation)
@@ -259,7 +266,7 @@ and `src/kb_mcp/` for the implementation.
 │   ├── rate_limit.py   # Per-owner 30 req/60 s sliding window, injectable clock
 │   ├── audit.py        # Append-only audit log, mask_token secrecy choke point
 │   └── errors.py       # AuthenticationError / AuthorizationError → client-safe payloads
-├── tests/                        # 16 modules, 252 tests (unit + integration + live E2E)
+├── tests/                        # 17 modules, 296 tests (unit + integration + live E2E)
 └── .planning/                    # GSD project docs (ROADMAP, STATE, phases) — gitignored
 ```
 
