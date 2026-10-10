@@ -1,0 +1,1 @@
+{"_comment":"Knowledge Base MCP server: start with `kb-mcp serve` (default bind 0.0.0.0:8000, streamable-http at /mcp). The client must send its token in the `x-api-token` HTTP header; configure the header client-side, never store secrets in this file.","mcpServers":{"knowledge-base":{"transport":"streamable-http","url":"http://localhost:8000/mcp"}}}
