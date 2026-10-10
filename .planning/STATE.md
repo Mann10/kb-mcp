@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-10-10T12:00:00.000Z"
+status: executing
+last_updated: "2026-10-10T06:39:04.498Z"
 progress:
   total_phases: 9
-  completed_phases: 5
-  total_plans: 11
-  completed_plans: 11
-  percent: 100
+  completed_phases: 7
+  total_plans: 17
+  completed_plans: 15
+  percent: 88
 ---
 
 # Project State
@@ -18,15 +18,15 @@ progress:
 
 **Project:** Knowledge Base MCP Server
 **Core Value:** Enable AI assistants to search and read personal notes while ensuring only authorized users can modify the knowledge base.
-**Current Focus:** Phase 04 — cli-token-management
+**Current Focus:** Phase 8 — Tag Management & Templates
 
 ## Current Position
 
-Phase: 07 (note-crud-operations) — COMPLETE
-Plan: 2 of 2 complete (07-01 create/delete tools 60f2489 + 1d3479b; 07-02 update/rename 97f42c0 + cb7e9d9; verification passed 14/14)
+Phase: 8 (Tag Management & Templates) — EXECUTING
+Plan: 2 of 2
 **Phase:** 8
-**Plan:** Not started
-**Status:** Ready to plan
+**Plan:** Planned — 2 plans in 2 waves
+**Status:** Executing Phase 8 (08-01 complete)
 **Progress:** [x] 100% (Phase 1 complete)
 
 ## Performance Metrics
@@ -72,6 +72,7 @@ Plan: 2 of 2 complete (07-01 create/delete tools 60f2489 + 1d3479b; 07-02 update
 - Delete resolves via shared _resolve_stem (stem-map + display-title fallback), tolerating .md suffix and case variants (07-01)
 - Storage validates update input via immediate NoteMetadata construction; rename is write-new + unlink-old + one commit_note_rename note(update) commit (07-02)
 - Update tool validates at the boundary before resolution; storage guards are the race backstop; no-op update is byte-identical success (07-02)
+- Tag tools share _validate_tag_list (list-of-str, len<100, whitespace-only reject); add stores caller casing verbatim with strip().lower() dedupe, remove matches strip().lower(); both idempotent No-changes success + single note(update) commit (08-01)
 
 ### Todos
 
@@ -85,7 +86,8 @@ Plan: 2 of 2 complete (07-01 create/delete tools 60f2489 + 1d3479b; 07-02 update
 - [ ] Plan Phase 6: Advanced Filtering
 - [x] Execute Phase 6 (06-01 tag filter + browse; 06-02 date range + AND combo — verification passed)
 - [x] Execute Phase 7 (07-01 create/delete; 07-02 update/rename — verification passed 14/14)
-- [ ] Plan Phase 8: Tag Management & Templates
+- [x] Plan Phase 8: Tag Management & Templates (08-01 tag tools, 08-02 templates — 2 waves sequential)
+- [x] Execute Phase 8 Wave 1 (08-01 add/remove tags — 575dddb, bc14e81)
 - [ ] Plan Phase 9: Integration & Hardening
 
 ### Blockers
@@ -94,8 +96,8 @@ Plan: 2 of 2 complete (07-01 create/delete tools 60f2489 + 1d3479b; 07-02 update
 
 ## Session Continuity
 
-**Last Action:** Phase 07 COMPLETE — verification passed 14/14, roadmap/requirements updated
-**Next Action:** Plan Phase 08 via /gsd-plan-phase 8 (Tag Management & Templates)
+**Last Action:** Phase 08-01 EXECUTED — add_tags + remove_tags with idempotent merge (575dddb, bc14e81), 20 tag tests + 34 write tests green
+**Next Action:** Execute Phase 08-02 via /gsd-execute-phase 8 (Templates: create_from_template)
 **Context Files:**
 
 - `.planning/PROJECT.md` — Project definition and constraints
