@@ -194,7 +194,7 @@ Plans:
 - [x] 09-02-PLAN.md — Rate limit + audit modules: per-owner 30/60s limiter, append-only audit log, secrecy proofs
 - [x] 09-03-PLAN.md — Transport auth + error mapping: x-api-token header, fail-closed context, rate/audit wiring, structured errors
 - [x] 09-04-PLAN.md — E2E proofs: booted-server real-protocol tests for SC-1..SC-5 (transport half)
-- [ ] 09-05-PLAN.md — Human checkpoint: live Claude Desktop connection proving SC-5
+- [x] 09-05-PLAN.md — Human checkpoint: live Claude Desktop connection proving SC-5
 
 Wave structure:
 - Wave 1: 09-01, 09-02 (parallel, no file overlap)
