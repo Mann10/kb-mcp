@@ -1,10 +1,17 @@
 {
   "mcpServers": {
     "knowledge-base": {
-      "transport": "streamable-http",
-      "url": "http://localhost:8000/mcp",
-      "headers": {
-        "x-api-token": "<paste-your-token-here>"
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://localhost:8000/mcp",
+        "--allow-http",
+        "--header",
+        "x-api-token:${KB_TOKEN}"
+      ],
+      "env": {
+        "KB_TOKEN": "<paste-your-token-here>"
       }
     }
   }

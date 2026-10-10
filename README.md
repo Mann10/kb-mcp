@@ -119,26 +119,54 @@ Startup fails fast with a clear message if `NOTES_DIR` is missing or not writabl
 ### 4. Connect a client
 
 Clients must send their token in the **`x-api-token` HTTP header** on every request —
-without it the server denies fail-closed. Include it in the client payload:
+without it the server denies fail-closed.
 
-Example `claude_desktop_config.json` (see also `claude_desktop_config.example.json`):
+> `claude_desktop_config.json` only accepts stdio entries (with `command`). A raw
+> `transport`/`url`/`headers` entry is rejected as invalid — use the `mcp-remote`
+> wrapper below (other clients like Claude Code or Cline accept the `url` form directly).
+
+**Prerequisites:** [Node.js](https://nodejs.org/) 18+ (for `npx`) and a running server
+(`kb-mcp serve` from step 3).
+
+Paste this into your Claude Desktop config file (`%APPDATA%\Claude\claude_desktop_config.json`
+on Windows, `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS —
+see also `claude_desktop_config.example.json`):
 
 ```json
 {
   "mcpServers": {
     "knowledge-base": {
-      "transport": "streamable-http",
-      "url": "http://localhost:8000/mcp",
-      "headers": {
-        "x-api-token": "<paste-your-token-here>"
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://localhost:8000/mcp",
+        "--allow-http",
+        "--header",
+        "x-api-token:${KB_TOKEN}"
+      ],
+      "env": {
+        "KB_TOKEN": "<paste-your-token-here>"
       }
     }
   }
 }
 ```
 
-Replace `<paste-your-token-here>` with a token from `kb-mcp generate` (shown once at
-generation time). Keep the real config file private — never commit secrets to git.
+Notes:
+- `--allow-http` is required because the URL is plain `http://` (localhost). Never use it
+  for remote URLs — traffic would be interceptable.
+- No space after the colon in `x-api-token:${KB_TOKEN}`: Claude Desktop on Windows mangles
+  args containing spaces — the token itself lives in `env`, where spaces are safe.
+- `mcp-remote` defaults to http-first transport, which matches the server's streamable-http
+  `/mcp` endpoint.
+- Replace `<paste-your-token-here>` with a token from `kb-mcp generate` (shown once at
+  generation time). Keep the real config file private — never commit secrets to git.
+- Fully quit and reopen Claude Desktop after editing the config.
+
+**Alternative (newer Claude Desktop):** Settings > Connectors > Add connector > Remote —
+enter URL `http://localhost:8000/mcp`, transport Streamable HTTP, and add the
+`x-api-token` header there. No config-file editing needed.
 
 ### 5. Verify it works
 
