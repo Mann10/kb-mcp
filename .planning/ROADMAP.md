@@ -13,7 +13,7 @@
 - [x] **Phase 5: Core Read Tools** - Search, get, list, browse tags (2026-10-09)
 - [x] **Phase 6: Advanced Filtering** - Tag and date range filtering (2026-10-10)
 - [x] **Phase 7: Note CRUD Operations** - Create, update, delete notes (2026-10-10)
-- [ ] **Phase 8: Tag Management & Templates** - Tag operations, note templates
+- [x] **Phase 8: Tag Management & Templates** - Tag operations, note templates (2026-10-10)
 - [ ] **Phase 9: Integration & Hardening** - Rate limiting, error handling, audit logging, E2E
 
 ## Phase Details
@@ -171,7 +171,7 @@ Wave structure:
 
 Plans:
 - [x] 08-01-PLAN.md — Tag tools: add_tags + remove_tags (WRITE-05/WRITE-06, idempotent case-insensitive merge, require_write)
-- [ ] 08-02-PLAN.md — Templates: TEMPLATES catalog + create_from_template (WRITE-07, override merge, require_write)
+- [x] 08-02-PLAN.md — Templates: TEMPLATES catalog + create_from_template (WRITE-07, override merge, require_write)
 
 Wave structure:
 - Wave 1: 08-01 (no dependencies)
@@ -200,7 +200,7 @@ Wave structure:
 | 5. Core Read Tools | 2/2 | Complete | 2026-10-09 |
 | 6. Advanced Filtering | 2/2 | Complete | 2026-10-10 |
 | 7. Note CRUD Operations | 2/2 | Complete | 2026-10-10 |
-| 8. Tag Management & Templates | 1/2 | In Progress | - |
+| 8. Tag Management & Templates | 2/2 | Complete | 2026-10-10 |
 | 9. Integration & Hardening | 0/7 | Not started | - |
 
 ## Coverage

@@ -34,7 +34,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **WRITE-04**: Delete note by title
 - [x] **WRITE-05**: Add tags to a note
 - [x] **WRITE-06**: Remove tags from a note
-- [ ] **WRITE-07**: Note templates for common note types (meeting, book, idea)
+- [x] **WRITE-07**: Note templates for common note types (meeting, book, idea)
 
 ### Storage
 
@@ -88,7 +88,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WRITE-04 | Phase 7 | Complete (07-01) |
 | WRITE-05 | Phase 8 | Complete (08-01) |
 | WRITE-06 | Phase 8 | Complete (08-01) |
-| WRITE-07 | Phase 8 | Pending |
+| WRITE-07 | Phase 8 | Complete (08-02) |
 | STOR-01 | Phase 1 | Complete |
 | STOR-02 | Phase 1 | Pending |
 | STOR-03 | Phase 2 | Complete |

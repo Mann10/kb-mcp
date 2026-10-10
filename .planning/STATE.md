@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-10-10T06:39:04.498Z"
+last_updated: "2026-10-10T06:44:03.000Z"
 progress:
   total_phases: 9
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 17
-  completed_plans: 15
-  percent: 88
+  completed_plans: 16
+  percent: 94
 ---
 
 # Project State
@@ -22,11 +22,11 @@ progress:
 
 ## Current Position
 
-Phase: 8 (Tag Management & Templates) — EXECUTING
-Plan: 2 of 2
+Phase: 8 (Tag Management & Templates) — COMPLETE
+Plan: 2 of 2 complete
 **Phase:** 8
 **Plan:** Planned — 2 plans in 2 waves
-**Status:** Executing Phase 8 (08-01 complete)
+**Status:** Phase 8 complete (08-01 tag tools, 08-02 templates)
 **Progress:** [x] 100% (Phase 1 complete)
 
 ## Performance Metrics
@@ -73,6 +73,7 @@ Plan: 2 of 2
 - Storage validates update input via immediate NoteMetadata construction; rename is write-new + unlink-old + one commit_note_rename note(update) commit (07-02)
 - Update tool validates at the boundary before resolution; storage guards are the race backstop; no-op update is byte-identical success (07-02)
 - Tag tools share _validate_tag_list (list-of-str, len<100, whitespace-only reject); add stores caller casing verbatim with strip().lower() dedupe, remove matches strip().lower(); both idempotent No-changes success + single note(update) commit (08-01)
+- Templates live as in-code TEMPLATES dict (meeting/book/idea with body_skeleton + default_tags); create_from_template validates name first (Unknown template listing book/idea/meeting), title first for error precedence, tags-union with seen-set dedupe, created canonicalized via fromisoformat().isoformat(); success message carries created from '<name>' template (08-02)
 
 ### Todos
 
@@ -88,6 +89,7 @@ Plan: 2 of 2
 - [x] Execute Phase 7 (07-01 create/delete; 07-02 update/rename — verification passed 14/14)
 - [x] Plan Phase 8: Tag Management & Templates (08-01 tag tools, 08-02 templates — 2 waves sequential)
 - [x] Execute Phase 8 Wave 1 (08-01 add/remove tags — 575dddb, bc14e81)
+- [x] Execute Phase 8 Wave 2 (08-02 templates — 979bb84, aada437)
 - [ ] Plan Phase 9: Integration & Hardening
 
 ### Blockers
@@ -96,8 +98,8 @@ Plan: 2 of 2
 
 ## Session Continuity
 
-**Last Action:** Phase 08-01 EXECUTED — add_tags + remove_tags with idempotent merge (575dddb, bc14e81), 20 tag tests + 34 write tests green
-**Next Action:** Execute Phase 08-02 via /gsd-execute-phase 8 (Templates: create_from_template)
+**Last Action:** Phase 08-02 EXECUTED — TEMPLATES catalog + create_from_template with override merge (979bb84, aada437), 21 template tests + 54 tag/write tests green (75 total)
+**Next Action:** Verify Phase 8 via /gsd-verify-work 8, then plan Phase 9 (Integration & Hardening)
 **Context Files:**
 
 - `.planning/PROJECT.md` — Project definition and constraints
