@@ -50,7 +50,6 @@ def token_store_path(tmp_path):
     """Isolated token-store file path for a single test (never shared)."""
     return tmp_path / ".tokens.json"
 
-
 @pytest.fixture
 def token_store(token_store_path):
     """TokenStore backed by an isolated tmp_path file.
@@ -130,3 +129,17 @@ def expired_entry_store(token_store_path):
         expires_at="2000-01-01T00:00:00+00:00",
     )
     return store
+
+
+@pytest.fixture
+def template_store_path(tmp_path):
+    """Isolated template-store file path for a single test (never shared)."""
+    return tmp_path / "templates.json"
+
+
+@pytest.fixture
+def template_store(template_store_path):
+    """TemplateStore seeded with built-ins in an isolated tmp_path file."""
+    from kb_mcp.templates import TemplateStore
+
+    return TemplateStore.load(store_path=template_store_path)

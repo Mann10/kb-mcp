@@ -229,10 +229,13 @@ def create_template(
         return {"success": False, "message": f"Invalid name '{name}': use letters, numbers, '-' or '_'."}
     if not isinstance(body_skeleton, str):
         return {"success": False, "message": "Invalid body_skeleton: must be a string."}
-    tags = list(default_tags) if default_tags is not None else []
-    tag_error = _validate_tags(tags)
-    if tag_error:
-        return {"success": False, "message": tag_error}
+    if default_tags is not None:
+        tag_error = _validate_tags(default_tags)
+        if tag_error:
+            return {"success": False, "message": tag_error}
+        tags = list(default_tags)
+    else:
+        tags = []
     tstore = get_template_store()
     try:
         tstore.add(norm, body_skeleton, tags)
@@ -262,11 +265,13 @@ def update_template(
         return {"success": False, "message": f"Invalid name '{name}': use letters, numbers, '-' or '_'."}
     if body_skeleton is not None and not isinstance(body_skeleton, str):
         return {"success": False, "message": "Invalid body_skeleton: must be a string."}
-    tags = list(default_tags) if default_tags is not None else None
-    if tags is not None:
-        tag_error = _validate_tags(tags)
+    if default_tags is not None:
+        tag_error = _validate_tags(default_tags)
         if tag_error:
             return {"success": False, "message": tag_error}
+        tags = list(default_tags)
+    else:
+        tags = None
     tstore = get_template_store()
     if tstore.get(norm) is None:
         return {"success": False, "message": _unknown_message(name)}

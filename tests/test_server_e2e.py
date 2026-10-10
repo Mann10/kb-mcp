@@ -44,6 +44,10 @@ EXPECTED_TOOLS = {
     "add_tags",
     "remove_tags",
     "create_from_template",
+    "list_templates",
+    "create_template",
+    "update_template",
+    "delete_template",
 }
 
 ALPHA_BODY = "alpha body mentioning wombat-signal for search"
@@ -116,6 +120,7 @@ def live_server(tmp_path_factory):
     env["NOTES_DIR"] = str(notes_dir)
     env["KB_TOKENS_FILE"] = str(store_path)
     env["KB_AUDIT_FILE"] = str(audit_path)
+    env["KB_TEMPLATES_FILE"] = str(tmp_dir / "templates.json")
     env["KB_HOST"] = "127.0.0.1"
     env["KB_PORT"] = str(port)
     # Fail-closed isolation: the booted server must serve the tmp notes.
@@ -199,6 +204,45 @@ def test_smoke_lists_all_ten_tools(live_server):
     base_url, raws, _ = live_server
     names = list_tool_names(base_url, raws["reader"])
     assert EXPECTED_TOOLS.issubset(set(names)), f"missing tools: {EXPECTED_TOOLS - set(names)}"
+
+
+def test_e2e_template_crud_round_trip(live_server):
+    """Template CRUD over protocol: list built-ins, create, use, delete."""
+    base_url, raws, _ = live_server
+    writer = raws["writer"]
+
+    listed = call_tool(base_url, "list_templates", {}, writer)
+    _assert_no_traceback(listed)
+    assert listed.get("success") is True
+    assert {"book", "idea", "meeting"} <= {t.get("name") for t in listed.get("templates", [])}
+
+    made = call_tool(
+        base_url, "create_template",
+        {"name": "retro", "body_skeleton": "# Retro\n\n## Went well", "default_tags": ["retro"]},
+        writer,
+    )
+    _assert_no_traceback(made)
+    assert made.get("success") is True
+
+    used = call_tool(base_url, "create_from_template", {"template": "retro", "title": "Retro 12"}, writer)
+    _assert_no_traceback(used)
+    assert used.get("success") is True
+    assert used.get("tags") == ["retro"]
+
+    removed = call_tool(base_url, "delete_template", {"name": "retro"}, writer)
+    _assert_no_traceback(removed)
+    assert removed.get("success") is True
+
+    # Cleanup: the module-scoped server shares one notes dir, so remove the
+    # note created above — later tests assert exact note counts.
+    unmade = call_tool(base_url, "delete_note", {"title": "Retro 12"}, writer)
+    _assert_no_traceback(unmade)
+    assert unmade.get("success") is True
+
+    denied = call_tool(base_url, "create_template", {"name": "nope"}, raws["reader"])
+    _assert_no_traceback(denied)
+    assert denied.get("success") is False
+    assert denied.get("message") == "Write access required. Use a write token or contact the owner."
 
 
 def test_smoke_unauthenticated_call_denied(live_server):

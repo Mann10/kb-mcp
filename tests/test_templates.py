@@ -7,13 +7,16 @@ import pytest
 from kb_mcp import write_tools
 from kb_mcp.errors import AuthenticationError, AuthorizationError
 from kb_mcp.middleware import INVALID_TOKEN_MESSAGE, WRITE_DENIED_MESSAGE
+from kb_mcp.templates import configure_template_store
 
 
 @pytest.fixture(autouse=True)
-def _use_isolated_repo(repository):
+def _use_isolated_repo(repository, template_store):
     write_tools.configure_default_repo(repository)
+    configure_template_store(template_store)
     yield
     write_tools.configure_default_repo(None)
+    configure_template_store(None)
 
 
 def _w(token_store, read_write_token_pair):
