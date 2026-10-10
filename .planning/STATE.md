@@ -25,7 +25,7 @@ progress:
 Phase: 06 (advanced-filtering) — COMPLETE
 Plan: 2 of 2 complete (06-01 tag filter df3fe4b + 4698294; 06-02 date range 7d02561 + 14f781c; review fix 8d4e5c2)
 **Phase:** 7
-**Plan:** 1 of 2 complete (07-01 create/delete tools 60f2489 + 1d3479b)
+**Plan:** 2 of 2 complete (07-01 create/delete tools 60f2489 + 1d3479b; 07-02 update/rename 97f42c0 + cb7e9d9)
 **Status:** In progress
 **Progress:** [x] 100% (Phase 1 complete)
 
@@ -70,6 +70,8 @@ Plan: 2 of 2 complete (06-01 tag filter df3fe4b + 4698294; 06-02 date range 7d02
 - Three sequential continue-guards (keyword-if-q, tag-if-active, dates-if-active) implement AND; parts-list echo names only active filters; legacy unfiltered strings byte-identical (06-02)
 - Write tools validate at the boundary with structured dicts; slug output gated by validate_filename before I/O; create success carries D-16 field set without body (07-01)
 - Delete resolves via shared _resolve_stem (stem-map + display-title fallback), tolerating .md suffix and case variants (07-01)
+- Storage validates update input via immediate NoteMetadata construction; rename is write-new + unlink-old + one commit_note_rename note(update) commit (07-02)
+- Update tool validates at the boundary before resolution; storage guards are the race backstop; no-op update is byte-identical success (07-02)
 
 ### Todos
 
@@ -83,6 +85,7 @@ Plan: 2 of 2 complete (06-01 tag filter df3fe4b + 4698294; 06-02 date range 7d02
 - [ ] Plan Phase 6: Advanced Filtering
 - [x] Execute Phase 6 (06-01 tag filter + browse; 06-02 date range + AND combo — verification passed)
 - [x] Execute Phase 7 Plan 01 (07-01 create/delete tools — 60f2489, 1d3479b)
+- [x] Execute Phase 7 Plan 02 (07-02 update/rename — 97f42c0, cb7e9d9)
 - [ ] Plan Phase 7: Note CRUD Operations
 - [ ] Plan Phase 8: Tag Management & Templates
 - [ ] Plan Phase 9: Integration & Hardening
@@ -93,8 +96,8 @@ Plan: 2 of 2 complete (06-01 tag filter df3fe4b + 4698294; 06-02 date range 7d02
 
 ## Session Continuity
 
-**Last Action:** Executed 07-01 — create_note + delete_note write tools with slugify/resolve helpers and 15 seeded proofs (WRITE-01/WRITE-04)
-**Next Action:** Execute Phase 07 Plan 02 (update_note with rename) via /gsd-execute-phase 7
+**Last Action:** Executed 07-02 — update_note with rename, single-commit atomic storage path, 19 new proofs (WRITE-02/WRITE-03); full suite 183 passed
+**Next Action:** Verify Phase 07 (/gsd-verify-work 7) then plan Phase 08 via /gsd-plan-phase 8
 **Context Files:**
 
 - `.planning/PROJECT.md` — Project definition and constraints

@@ -153,7 +153,7 @@ Wave structure:
 
 Plans:
 - [x] 07-01-PLAN.md — Create + delete tools (WRITE-01/WRITE-04, slugify + resolve helpers, require_write)
-- [ ] 07-02-PLAN.md — Update tool + rename (WRITE-02/WRITE-03, single-commit storage rename, atomicity)
+- [x] 07-02-PLAN.md — Update tool + rename (WRITE-02/WRITE-03, single-commit storage rename, atomicity)
 
 Wave structure:
 - Wave 1: 07-01 (no dependencies)
@@ -191,7 +191,7 @@ Wave structure:
 | 4. CLI Token Management | 2/2 | Complete | 2026-10-09 |
 | 5. Core Read Tools | 2/2 | Complete | 2026-10-09 |
 | 6. Advanced Filtering | 2/2 | Complete | 2026-10-10 |
-| 7. Note CRUD Operations | 1/2 | In Progress | - |
+| 7. Note CRUD Operations | 2/2 | Complete | 2026-10-10 |
 | 8. Tag Management & Templates | 0/6 | Not started | - |
 | 9. Integration & Hardening | 0/7 | Not started | - |
 
