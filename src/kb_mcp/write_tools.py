@@ -235,3 +235,111 @@ def update_note(
         "created": note.metadata.created,
         "message": f"Updated note '{note.metadata.title}'.",
     }
+
+
+INVALID_TAGS_MESSAGE = "Invalid tags: must be a list of strings each under 100 characters."
+
+
+def _validate_tag_list(tags) -> str | None:
+    """Return None when valid, else the structured invalid-tags message."""
+    if (
+        not isinstance(tags, list)
+        or any(not isinstance(t, str) for t in tags)
+        or any(len(t) >= 100 for t in tags)
+    ):
+        return INVALID_TAGS_MESSAGE
+    for t in tags:
+        if not t.strip():
+            return INVALID_TAGS_MESSAGE
+    return None
+
+
+@require_write
+def add_tags(title: str, tags: list[str], *, token=None, _store=None) -> dict:
+    """Add tags to an existing note; duplicates are idempotent success (D-02/D-05/D-06)."""
+    repo = _resolve_repo()
+    invalid = _validate_tag_list(tags)
+    if invalid is not None:
+        return {"success": False, "message": f"Invalid tags: must be a list of strings each under 100 characters."}
+    incoming = [t.strip() for t in tags]
+    real_stem = _resolve_stem(repo, title) if isinstance(title, str) else None
+    if real_stem is None:
+        return {"success": False, "message": f"Note '{title}' not found."}
+    try:
+        note = repo.read_note(real_stem + ".md")
+    except NoteNotFoundError:
+        return {"success": False, "message": f"Note '{title}' not found."}
+    existing = list(note.metadata.tags or [])
+    seen = {t.strip().lower() for t in existing}
+    merged = list(existing)
+    for s in incoming:
+        if s.lower() in seen:
+            continue
+        merged.append(s)
+        seen.add(s.lower())
+    if merged == existing:
+        return {
+            "success": True,
+            "filename": note.filename,
+            "title": note.metadata.title,
+            "tags": list(note.metadata.tags),
+            "created": note.metadata.created,
+            "message": f"No changes — note '{note.metadata.title}' already has those tags.",
+        }
+    try:
+        updated = repo.update_note(real_stem + ".md", tags=merged)
+    except NoteNotFoundError:
+        return {"success": False, "message": f"Note '{title}' not found."}
+    except (InvalidTypeError, ValueError) as e:
+        return {"success": False, "message": f"Invalid note field: {e}."}
+    return {
+        "success": True,
+        "filename": updated.filename,
+        "title": updated.metadata.title,
+        "tags": list(updated.metadata.tags),
+        "created": updated.metadata.created,
+        "message": f"Added {len(merged) - len(existing)} tag(s) to '{updated.metadata.title}'.",
+    }
+
+
+@require_write
+def remove_tags(title: str, tags: list[str], *, token=None, _store=None) -> dict:
+    """Remove tags from an existing note; missing tags are idempotent success (D-03/D-08)."""
+    repo = _resolve_repo()
+    invalid = _validate_tag_list(tags)
+    if invalid is not None:
+        return {"success": False, "message": f"Invalid tags: must be a list of strings each under 100 characters."}
+    incoming = [t.strip() for t in tags]
+    real_stem = _resolve_stem(repo, title) if isinstance(title, str) else None
+    if real_stem is None:
+        return {"success": False, "message": f"Note '{title}' not found."}
+    try:
+        note = repo.read_note(real_stem + ".md")
+    except NoteNotFoundError:
+        return {"success": False, "message": f"Note '{title}' not found."}
+    existing = list(note.metadata.tags or [])
+    drop = {s.lower() for s in incoming}
+    kept = [t for t in existing if t.strip().lower() not in drop]
+    if kept == existing:
+        return {
+            "success": True,
+            "filename": note.filename,
+            "title": note.metadata.title,
+            "tags": list(note.metadata.tags),
+            "created": note.metadata.created,
+            "message": f"No changes — note '{note.metadata.title}' already lacks those tags.",
+        }
+    try:
+        updated = repo.update_note(real_stem + ".md", tags=kept)
+    except NoteNotFoundError:
+        return {"success": False, "message": f"Note '{title}' not found."}
+    except (InvalidTypeError, ValueError) as e:
+        return {"success": False, "message": f"Invalid note field: {e}."}
+    return {
+        "success": True,
+        "filename": updated.filename,
+        "title": updated.metadata.title,
+        "tags": list(updated.metadata.tags),
+        "created": updated.metadata.created,
+        "message": f"Removed {len(existing) - len(kept)} tag(s) from '{updated.metadata.title}'.",
+    }
