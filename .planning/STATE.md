@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-last_updated: "2026-10-10T06:48:13.618Z"
+last_updated: "2026-10-10T07:30:51.000Z"
 progress:
   total_phases: 9
   completed_phases: 8
@@ -25,8 +25,8 @@ progress:
 Phase: 8 (Tag Management & Templates) — COMPLETE
 Plan: 2 of 2 complete
 **Phase:** 9
-**Plan:** Not started
-**Status:** Ready to plan
+**Plan:** 1 of 5 complete (09-01 Server foundation)
+**Status:** Executing Phase 9
 **Progress:** [x] 100% (Phase 1 complete)
 
 ## Performance Metrics
@@ -74,6 +74,7 @@ Plan: 2 of 2 complete
 - Update tool validates at the boundary before resolution; storage guards are the race backstop; no-op update is byte-identical success (07-02)
 - Tag tools share _validate_tag_list (list-of-str, len<100, whitespace-only reject); add stores caller casing verbatim with strip().lower() dedupe, remove matches strip().lower(); both idempotent No-changes success + single note(update) commit (08-01)
 - Templates live as in-code TEMPLATES dict (meeting/book/idea with body_skeleton + default_tags); create_from_template validates name first (Unknown template listing book/idea/meeting), title first for error precedence, tags-union with seen-set dedupe, created canonicalized via fromisoformat().isoformat(); success message carries created from '<name>' template (08-02)
+- MCP server foundation: FastMCP KnowledgeBase app with 10 clean-schema wrappers delegating token+_store; serve() on streamable-http 0.0.0.0:8000 with fail-fast NOTES_DIR guard; get_request_token() stub fails closed until 09-03 (09-01)
 
 ### Todos
 
@@ -91,6 +92,7 @@ Plan: 2 of 2 complete
 - [x] Execute Phase 8 Wave 1 (08-01 add/remove tags — 575dddb, bc14e81)
 - [x] Execute Phase 8 Wave 2 (08-02 templates — 979bb84, aada437)
 - [ ] Plan Phase 9: Integration & Hardening
+- [x] Execute Phase 9 Plan 09-01 (server foundation: fastmcp dep, serve entry, 10 wrappers, fail-fast, snippet — eedb710, 73f9bae, c9a04a5)
 
 ### Blockers
 
@@ -98,8 +100,8 @@ Plan: 2 of 2 complete
 
 ## Session Continuity
 
-**Last Action:** Phase 08-02 EXECUTED — TEMPLATES catalog + create_from_template with override merge (979bb84, aada437), 21 template tests + 54 tag/write tests green (75 total)
-**Next Action:** Verify Phase 8 via /gsd-verify-work 8, then plan Phase 9 (Integration & Hardening)
+**Last Action:** Phase 09-01 EXECUTED — server foundation with 10 wrappers, fail-fast startup, client snippet (eedb710, 73f9bae, c9a04a5), pytest 224 passed + 2 skipped
+**Next Action:** Execute Phase 9 Plan 09-02 (rate limit + audit modules, parallel wave with 09-01 — no file overlap)
 **Context Files:**
 
 - `.planning/PROJECT.md` — Project definition and constraints

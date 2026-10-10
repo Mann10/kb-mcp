@@ -187,7 +187,20 @@ Wave structure:
   3. All write operations are logged for audit purposes
   4. Error messages are clear and actionable (no stack traces to clients)
   5. The server can be started and connected to by an MCP client (Claude Desktop, etc.)
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [x] 09-01-PLAN.md — Server foundation: fastmcp dep, kb-mcp serve entry, 10 tool wrappers, fail-fast startup, Claude Desktop snippet
+- [ ] 09-02-PLAN.md — Rate limit + audit modules: per-owner 30/60s limiter, append-only audit log, secrecy proofs
+- [ ] 09-03-PLAN.md — Transport auth + error mapping: x-api-token header, fail-closed context, rate/audit wiring, structured errors
+- [ ] 09-04-PLAN.md — E2E proofs: booted-server real-protocol tests for SC-1..SC-5 (transport half)
+- [ ] 09-05-PLAN.md — Human checkpoint: live Claude Desktop connection proving SC-5
+
+Wave structure:
+- Wave 1: 09-01, 09-02 (parallel, no file overlap)
+- Wave 2: 09-03 (depends on 09-01, 09-02)
+- Wave 3: 09-04 (depends on 09-03)
+- Wave 4: 09-05 (depends on 09-04, human-verify checkpoint)
 
 ## Progress
 
@@ -201,7 +214,7 @@ Wave structure:
 | 6. Advanced Filtering | 2/2 | Complete | 2026-10-10 |
 | 7. Note CRUD Operations | 2/2 | Complete | 2026-10-10 |
 | 8. Tag Management & Templates | 2/2 | Complete    | 2026-10-10 |
-| 9. Integration & Hardening | 0/7 | Not started | - |
+| 9. Integration & Hardening | 1/5 | In Progress | - |
 
 ## Coverage
 
