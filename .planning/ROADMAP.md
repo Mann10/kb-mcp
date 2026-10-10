@@ -12,7 +12,7 @@
 - [x] **Phase 4: CLI Token Management** - Full token lifecycle (generate, revoke, list, rotate, TTL) (2026-10-09)
 - [x] **Phase 5: Core Read Tools** - Search, get, list, browse tags (2026-10-09)
 - [x] **Phase 6: Advanced Filtering** - Tag and date range filtering (2026-10-10)
-- [ ] **Phase 7: Note CRUD Operations** - Create, update, delete notes
+- [x] **Phase 7: Note CRUD Operations** - Create, update, delete notes (2026-10-10)
 - [ ] **Phase 8: Tag Management & Templates** - Tag operations, note templates
 - [ ] **Phase 9: Integration & Hardening** - Rate limiting, error handling, audit logging, E2E
 
