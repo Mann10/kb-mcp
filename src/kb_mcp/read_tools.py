@@ -63,6 +63,10 @@ def search_notes(query: str = "", limit: int = 10, tag: str | None = None, date_
                 datetime.date.fromisoformat(bound)
             except ValueError:
                 return {"results": [], "message": f"Invalid date filter value '{bound}'. Use YYYY-MM-DD."}
+    if df_raw is not None:
+        df_raw = datetime.date.fromisoformat(df_raw).isoformat()
+    if dt_raw is not None:
+        dt_raw = datetime.date.fromisoformat(dt_raw).isoformat()
     date_active = df_raw is not None or dt_raw is not None
     if not q and not tag_active and not date_active:
         return {"results": [], "message": f"No notes found matching '{query}'."}
