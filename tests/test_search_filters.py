@@ -136,3 +136,129 @@ def test_filtered_bogus_token_denied(token_store, read_token_pair):
 def test_filtered_missing_token_denied(token_store, read_token_pair):
     with pytest.raises(AuthenticationError, match="Invalid or missing token"):
         read_tools.search_notes("", tag="work", _store=token_store)
+
+
+def test_date_both_bounds_inclusive(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.search_notes(
+        "", date_from="2026-02-01", date_to="2026-03-01", token=raw, _store=token_store
+    )
+    assert [r["filename"] for r in out["results"]] == ["beta-note", "gamma-note"]
+
+
+def test_date_single_day_boundary(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.search_notes(
+        "", date_from="2026-02-01", date_to="2026-02-01", token=raw, _store=token_store
+    )
+    assert [r["filename"] for r in out["results"]] == ["beta-note"]
+
+
+def test_date_only_start(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.search_notes(
+        "", date_from="2026-03-01", token=raw, _store=token_store
+    )
+    assert [r["filename"] for r in out["results"]] == ["gamma-note", "delta-note"]
+
+
+def test_date_only_end(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.search_notes(
+        "", date_to="2026-01-01", token=raw, _store=token_store
+    )
+    assert [r["filename"] for r in out["results"]] == ["alpha-note"]
+
+
+def test_date_out_of_range_structured_empty(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.search_notes(
+        "", date_from="2030-01-01", token=raw, _store=token_store
+    )
+    assert out["results"] == []
+    assert "2030-01-01" in out["message"]
+
+
+def test_keyword_tag_date_and_combo(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    hit = read_tools.search_notes(
+        "checker",
+        tag="review",
+        date_from="2026-01-15",
+        date_to="2026-02-15",
+        token=raw,
+        _store=token_store,
+    )
+    assert [r["filename"] for r in hit["results"]] == ["beta-note"]
+    miss = read_tools.search_notes(
+        "checker", tag="review", date_from="2026-03-01", token=raw, _store=token_store
+    )
+    assert miss["results"] == []
+
+
+def test_keyword_date_combo_miss(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.search_notes(
+        "planner", date_to="2025-12-31", token=raw, _store=token_store
+    )
+    assert out["results"] == []
+
+
+def test_invalid_date_from_structured_empty(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.search_notes(
+        "", date_from="not-a-date", token=raw, _store=token_store
+    )
+    assert out["results"] == []
+    assert "not-a-date" in out["message"]
+    assert "Invalid" in out["message"]
+
+
+def test_invalid_date_to_structured_empty(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.search_notes(
+        "", date_to="2024-13-99", token=raw, _store=token_store
+    )
+    assert out["results"] == []
+    assert "2024-13-99" in out["message"]
+    assert "Invalid" in out["message"]
+
+
+def test_filter_echo_on_hit(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.search_notes(
+        "gamma",
+        tag="personal",
+        date_from="2026-01-01",
+        date_to="2026-12-31",
+        token=raw,
+        _store=token_store,
+    )
+    assert out["results"] != []
+    assert "tag='personal'" in out["message"]
+    assert "date_from='2026-01-01'" in out["message"]
+    assert "date_to='2026-12-31'" in out["message"]
+
+
+def test_filter_echo_on_miss(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.search_notes(
+        "zzz", tag="personal", date_from="2026-01-01", token=raw, _store=token_store
+    )
+    assert out["results"] == []
+    assert "tag='personal'" in out["message"]
+    assert "date_from='2026-01-01'" in out["message"]
+
+
+def test_unfiltered_legacy_message_identical(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.search_notes("planner", token=raw, _store=token_store)
+    assert out["message"] == "Found 1 note(s) matching 'planner'."
+
+
+def test_ranking_limit_with_date_filter(token_store, read_token_pair):
+    raw, _ = read_token_pair
+    out = read_tools.search_notes(
+        "e", date_from="2026-01-01", limit=1, token=raw, _store=token_store
+    )
+    assert len(out["results"]) == 1
