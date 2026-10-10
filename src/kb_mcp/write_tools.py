@@ -343,3 +343,101 @@ def remove_tags(title: str, tags: list[str], *, token=None, _store=None) -> dict
         "created": updated.metadata.created,
         "message": f"Removed {len(existing) - len(kept)} tag(s) from '{updated.metadata.title}'.",
     }
+
+
+TEMPLATES = {
+    "meeting": {
+        "default_tags": ["meeting"],
+        "body_skeleton": "# Meeting Notes\n\n## Attendees\n\n- \n\n## Agenda\n\n- \n\n## Notes\n\n\n## Action Items\n\n- [ ] \n",
+    },
+    "book": {
+        "default_tags": ["book"],
+        "body_skeleton": "# Book Notes\n\n## Summary\n\n\n## Key Takeaways\n\n- \n\n## Quotes\n\n> \n\n## Rating\n\n_Notes: /5_\n",
+    },
+    "idea": {
+        "default_tags": ["idea"],
+        "body_skeleton": "# Idea\n\n## Idea\n\n\n## Why\n\n\n## Next Steps\n\n- [ ] \n",
+    },
+}
+
+
+@require_write
+def create_from_template(
+    template: str,
+    title: str,
+    body: str | None = None,
+    tags: list[str] | None = None,
+    created: str | None = None,
+    *,
+    token=None,
+    _store=None,
+) -> dict:
+    """Create a new note from a template skeleton with override merge (D-09..D-16)."""
+    repo = _resolve_repo()
+    norm = template.strip().lower() if isinstance(template, str) else ""
+    if norm not in TEMPLATES:
+        return {"success": False, "message": f"Unknown template '{template}'. Valid templates: book, idea, meeting."}
+    spec = TEMPLATES[norm]
+    effective_body = body if body is not None else spec["body_skeleton"]
+    effective_tags = list(spec["default_tags"])
+    if not isinstance(title, str) or not title.strip():
+        return {"success": False, "message": "Invalid title: must be a non-empty string."}
+    display_title = title.strip()
+    if tags is not None:
+        if (
+            not isinstance(tags, list)
+            or any(not isinstance(t, str) for t in tags)
+            or any(len(t) >= 100 for t in tags)
+        ):
+            return {"success": False, "message": "Invalid tags: must be a list of strings each under 100 characters."}
+        for t in tags:
+            if not t.strip():
+                return {"success": False, "message": "Invalid tags: must be a list of strings each under 100 characters."}
+        seen = {t.strip().lower() for t in effective_tags}
+        for raw in tags:
+            s = raw.strip()
+            if s.lower() in seen:
+                continue
+            effective_tags.append(s)
+            seen.add(s.lower())
+    if (
+        not isinstance(effective_tags, list)
+        or any(not isinstance(t, str) for t in effective_tags)
+        or any(len(t) >= 100 for t in effective_tags)
+    ):
+        return {"success": False, "message": "Invalid tags: must be a list of strings each under 100 characters."}
+    for t in effective_tags:
+        if not t.strip():
+            return {"success": False, "message": "Invalid tags: must be a list of strings each under 100 characters."}
+    if created is None:
+        created = datetime.date.today().isoformat()
+    if not isinstance(created, str):
+        return {"success": False, "message": f"Invalid created: must be an ISO date (YYYY-MM-DD), got '{created}'."}
+    try:
+        created = datetime.date.fromisoformat(created.strip()).isoformat()
+    except ValueError:
+        return {"success": False, "message": f"Invalid created: must be an ISO date (YYYY-MM-DD), got '{created}'."}
+    if not isinstance(effective_body, str):
+        return {"success": False, "message": "Invalid body: must be a string."}
+    filename = _slugify_title(display_title)
+    if filename is None:
+        return {"success": False, "message": "Invalid title: must slugify to a safe filename."}
+    try:
+        validate_filename(filename)
+    except InvalidTypeError:
+        return {"success": False, "message": "Invalid title: must slugify to a safe filename."}
+    if (repo.notes_dir / filename).exists():
+        stem = filename[:-3]
+        return {"success": False, "message": f"Note '{display_title}' already exists as {stem}."}
+    try:
+        note = repo.write_note(filename, display_title, effective_body, list(effective_tags), created)
+    except InvalidTypeError as e:
+        return {"success": False, "message": f"Invalid note field: {e}."}
+    return {
+        "success": True,
+        "filename": note.filename,
+        "title": note.metadata.title,
+        "tags": list(note.metadata.tags),
+        "created": note.metadata.created,
+        "message": f"Note '{note.metadata.title}' created from '{norm}' template as {note.filename}.",
+    }
