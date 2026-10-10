@@ -44,16 +44,17 @@ def _build_snippet(body: str, q: str, hit_index: int) -> str:
 
 
 @require_read
-def search_notes(query: str, limit: int = 10, *, token=None, _store=None) -> dict:
-    """Search notes by keyword across body + title + stem + tags."""
+def search_notes(query: str = "", limit: int = 10, tag: str | None = None, date_from: str | None = None, date_to: str | None = None, *, token=None, _store=None) -> dict:
+    """Search notes by keyword across body + title + stem + tags, with tag/date narrowing."""
     repo = _resolve_repo()
     if not isinstance(limit, int) or limit <= 0:
         limit = DEFAULT_LIMIT
     else:
         limit = min(limit, MAX_LIMIT)
-    if not isinstance(query, str) or not query.strip():
+    q = query.strip().lower() if isinstance(query, str) else ""
+    tag_active = isinstance(tag, str) and bool(tag.strip())
+    if not q and not tag_active and not date_from and not date_to:
         return {"results": [], "message": f"No notes found matching '{query}'."}
-    q = query.strip().lower()
     try:
         stems = sorted(
             p.stem
@@ -71,20 +72,23 @@ def search_notes(query: str, limit: int = 10, *, token=None, _store=None) -> dic
         body = note.body or ""
         title = note.metadata.title or ""
         tags = list(note.metadata.tags or [])
-        hit_index = body.lower().find(q)
+        hit_index = body.lower().find(q) if q else -1
         body_hit = hit_index >= 0
         title_hit = q in title.lower() or q in stem.lower()
         tags_hit = any(q in t.lower() for t in tags)
-        if not (body_hit or title_hit or tags_hit):
+        tag_hit = True if not tag_active else any(t.strip().lower() == tag.strip().lower() for t in tags)
+        if tag_active and not tag_hit:
+            continue
+        if q and not (body_hit or title_hit or tags_hit):
             continue
         if body_hit:
             rank = 0
             snippet = _build_snippet(body, q, hit_index)
-        elif title_hit:
-            rank = 1
+        elif q:
+            rank = 1 if title_hit else 2
             snippet = " ".join(body[:200].split())
         else:
-            rank = 2
+            rank = 0
             snippet = " ".join(body[:200].split())
         ranked.append(
             (
@@ -101,12 +105,28 @@ def search_notes(query: str, limit: int = 10, *, token=None, _store=None) -> dic
         )
     ranked.sort(key=lambda item: (item[0], item[1]))
     results = [payload for _, _, payload in ranked[:limit]]
+    if not tag_active:
+        if not results:
+            return {"results": [], "message": f"No notes found matching '{query}'."}
+        count = len(results)
+        return {
+            "results": results,
+            "message": f"Found {count} note(s) matching '{query}'.",
+        }
+    tag_echo = tag.strip()
     if not results:
-        return {"results": [], "message": f"No notes found matching '{query}'."}
+        if q:
+            return {"results": [], "message": f"No notes found matching '{query}' [tag='{tag_echo}']."}
+        return {"results": [], "message": f"No notes found [tag='{tag_echo}']."}
     count = len(results)
+    if q:
+        return {
+            "results": results,
+            "message": f"Found {count} note(s) matching '{query}' [tag='{tag_echo}'].",
+        }
     return {
         "results": results,
-        "message": f"Found {count} note(s) matching '{query}'.",
+        "message": f"Found {count} note(s) [tag='{tag_echo}'].",
     }
 
 
