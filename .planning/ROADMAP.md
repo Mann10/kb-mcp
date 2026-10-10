@@ -167,7 +167,7 @@ Wave structure:
   1. Write-token holder can add tags to an existing note
   2. Write-token holder can remove tags from an existing note
   3. Write-token holder can create notes from templates (meeting, book, idea) with pre-populated structure
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 08-01-PLAN.md — Tag tools: add_tags + remove_tags (WRITE-05/WRITE-06, idempotent case-insensitive merge, require_write)
@@ -200,7 +200,7 @@ Wave structure:
 | 5. Core Read Tools | 2/2 | Complete | 2026-10-09 |
 | 6. Advanced Filtering | 2/2 | Complete | 2026-10-10 |
 | 7. Note CRUD Operations | 2/2 | Complete | 2026-10-10 |
-| 8. Tag Management & Templates | 2/2 | Complete | 2026-10-10 |
+| 8. Tag Management & Templates | 2/2 | Complete    | 2026-10-10 |
 | 9. Integration & Hardening | 0/7 | Not started | - |
 
 ## Coverage

@@ -23,6 +23,9 @@ Enable AI assistants to search and read personal notes while ensuring only autho
 - [x] Write-token holders can create new notes with structured validation (Phase 7: create_note with slugify + exists-reject)
 - [x] Write-token holders can update existing notes incl. title-rename with single-commit atomicity (Phase 7: update_note + commit_note_rename)
 - [x] Write-token holders can delete notes with structured not-found (Phase 7: delete_note)
+- [x] Write-token holders can add tags to existing notes with idempotent merge (Phase 8: add_tags)
+- [x] Write-token holders can remove tags from existing notes with idempotent merge (Phase 8: remove_tags)
+- [x] Write-token holders can create notes from templates meeting/book/idea (Phase 8: create_from_template)
 
 ### Active
 
@@ -84,4 +87,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-10 after Phase 7 completion*
+*Last updated: 2026-10-10 after Phase 8 completion*
