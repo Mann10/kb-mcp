@@ -153,3 +153,85 @@ def delete_note(title: str, *, token=None, _store=None) -> dict:
     except NoteNotFoundError:
         return {"success": False, "message": f"Note '{title}' not found."}
     return {"success": True, "filename": stem, "message": f"Note '{stem}' deleted."}
+
+
+@require_write
+def update_note(
+    title: str,
+    new_title: str | None = None,
+    body: str | None = None,
+    tags: list[str] | None = None,
+    created: str | None = None,
+    *,
+    token=None,
+    _store=None,
+) -> dict:
+    """Update content/metadata of an existing note; rename on new_title."""
+    repo = _resolve_repo()
+    if new_title is None and body is None and tags is None and created is None:
+        real_stem = _resolve_stem(repo, title) if isinstance(title, str) else None
+        if real_stem is None:
+            return {"success": False, "message": f"Note '{title}' not found."}
+        try:
+            note = repo.read_note(real_stem + ".md")
+        except NoteNotFoundError:
+            return {"success": False, "message": f"Note '{title}' not found."}
+        return {
+            "success": True,
+            "filename": note.filename,
+            "title": note.metadata.title,
+            "tags": list(note.metadata.tags),
+            "created": note.metadata.created,
+            "message": f"No changes — note '{title}' unchanged.",
+        }
+    if tags is not None:
+        if (
+            not isinstance(tags, list)
+            or any(not isinstance(t, str) for t in tags)
+            or any(len(t) >= 100 for t in tags)
+        ):
+            return {"success": False, "message": "Invalid tags: must be a list of strings each under 100 characters."}
+    if created is not None:
+        if not isinstance(created, str):
+            return {"success": False, "message": f"Invalid created: must be YYYY-MM-DD, got '{created}'."}
+        try:
+            datetime.date.fromisoformat(created.strip())
+        except ValueError:
+            return {"success": False, "message": f"Invalid created: must be YYYY-MM-DD, got '{created}'."}
+    if new_title is not None:
+        if not isinstance(new_title, str) or not new_title.strip():
+            return {"success": False, "message": "Invalid title: must be a non-empty string."}
+        if _slugify_title(new_title) is None:
+            return {"success": False, "message": f"Invalid title: '{new_title}' cannot form a safe filename."}
+    if body is not None and not isinstance(body, str):
+        return {"success": False, "message": "Invalid body: must be a string."}
+    real_stem = _resolve_stem(repo, title) if isinstance(title, str) else None
+    if real_stem is None:
+        return {"success": False, "message": f"Note '{title}' not found."}
+    if new_title is not None:
+        slug_file = _slugify_title(new_title)
+        slug = slug_file[:-3] if slug_file is not None else None
+        if slug is not None and slug != real_stem and (repo.notes_dir / (slug + ".md")).exists():
+            return {"success": False, "message": f"Note '{new_title.strip()}' already exists as '{slug}'. Rename rejected."}
+    try:
+        note = repo.update_note(
+            real_stem + ".md",
+            title=(new_title.strip() if new_title is not None else None),
+            body=body,
+            tags=(list(tags) if tags is not None else None),
+            created=created,
+        )
+    except NoteNotFoundError:
+        return {"success": False, "message": f"Note '{title}' not found."}
+    except (InvalidTypeError, ValueError) as e:
+        return {"success": False, "message": f"Invalid note field: {e}."}
+    except FileExistsError as e:
+        return {"success": False, "message": f"Note '{new_title}' already exists. Rename rejected. ({e})"}
+    return {
+        "success": True,
+        "filename": note.filename,
+        "title": note.metadata.title,
+        "tags": list(note.metadata.tags),
+        "created": note.metadata.created,
+        "message": f"Updated note '{note.metadata.title}'.",
+    }
