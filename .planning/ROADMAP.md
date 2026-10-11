@@ -3,6 +3,7 @@
 **Created:** 2026-10-09
 **Granularity:** Fine (9 phases)
 **Requirements:** 23 v1 requirements mapped
+**v3.0 appended:** 2026-10-11 — 4 phases (10–13), 24 v3.0 requirements mapped (inline, agents unavailable)
 
 ## Phases
 
@@ -15,6 +16,10 @@
 - [x] **Phase 7: Note CRUD Operations** - Create, update, delete notes (2026-10-10)
 - [x] **Phase 8: Tag Management & Templates** - Tag operations, note templates (2026-10-10)
 - [x] **Phase 9: Integration & Hardening** - Rate limiting, error handling, audit logging, E2E (2026-10-10)
+- [ ] **Phase 10: Portal Auth & Shell** - Login, session, admin role + API seam (v3.0)
+- [ ] **Phase 11: Token Self-Serve & Admin** - Read self-serve, request/approve, mint, lifecycle (v3.0)
+- [ ] **Phase 12: KB Browse & Edit** - Search/read/list/tags + note CRUD from UI (v3.0)
+- [ ] **Phase 13: Setup, Activity & Settings** - Client guide, audit/revisions/usage, KB settings (v3.0)
 
 ## Phase Details
 
@@ -202,6 +207,59 @@ Wave structure:
 - Wave 3: 09-04 (depends on 09-03)
 - Wave 4: 09-05 (depends on 09-04, human-verify checkpoint)
 
+### Phase 10: Portal Auth & Shell (v3.0)
+**Goal**: Users can log in to the separate frontend; sessions persist; admin role gates privileged actions; UI talks to KB state through a safe API seam
+**Depends on**: v2 Supabase backend (tokens/notes tables live)
+**Requirements**: PORT-01, PORT-02, PORT-03
+**Success Criteria** (what must be TRUE):
+  1. A user can sign up / log in with email in the UI and stays logged in across refresh
+  2. Non-admin users hitting an admin-gated action get a clear denial (no data leak)
+  3. The UI never holds service_role keys — all privileged reads/writes go through a server-side API seam
+  4. Auth provider choice (Supabase Auth leading) is locked with rationale before Phase 11
+**Plans:** 1/2 plans executed
+
+Plans:
+- [x] 10-01-PLAN.md — Backend BFF auth seam: Supabase JWT validation, admin gates, /api/health+/api/me+/api/admin/ping + CORS
+- [ ] 10-02-PLAN.md — Vite+React auth shell on Vercel: login, session header, admin denial + live human checkpoint
+
+Wave structure:
+- Wave 1: 10-01 (no dependencies)
+- Wave 2: 10-02 (depends on 10-01 BFF contract)
+
+### Phase 11: Token Self-Serve & Admin (v3.0)
+**Goal**: Logged-in users self-serve read-only tokens; write upgrades flow through request/approve; admin owns full lifecycle
+**Depends on**: Phase 10
+**Requirements**: TOK-01, TOK-02, TOK-03, TOK-04, TOK-05, TOK-06
+**Success Criteria** (what must be TRUE):
+  1. A logged-in user can mint a read-only token and see it once with copy support (never full-value in lists)
+  2. A user can request a write upgrade and track its pending/approved/denied state
+  3. An admin can approve/deny from a queue and can directly mint either token type
+  4. Revoked/rotated tokens stop working (verify against Supabase semantics incl. TTL)
+  5. Token values are never logged or stored raw outside the one-time reveal
+**Plans:** TBD during `/gsd-plan-phase 11`
+
+### Phase 12: KB Browse & Edit (v3.0)
+**Goal**: Users browse/search/read the KB from the UI; write-authorized users run full note + tag CRUD without touching the CLI
+**Depends on**: Phase 11 (token-gated writes)
+**Requirements**: BROW-01, BROW-02, BROW-03, EDIT-01, EDIT-02, EDIT-03, EDIT-04
+**Success Criteria** (what must be TRUE):
+  1. Keyword search with snippets + tag browse works from the UI with v1 ranking preserved
+  2. A write-authorized user can create (incl. from template), update, and delete notes from the UI
+  3. Tag add/remove from the UI is idempotent and matches CLI semantics
+  4. Read-only token holders get clear denials on every edit action
+**Plans:** TBD during `/gsd-plan-phase 12`
+
+### Phase 13: Setup, Activity & Settings (v3.0)
+**Goal**: Users connect clients in minutes; admin watches activity and manages KB/app settings without code changes
+**Depends on**: Phases 10–12
+**Requirements**: SETUP-01, SETUP-02, ACT-01, ACT-02, ACT-03, CONF-01, CONF-02, CONF-03
+**Success Criteria** (what must be TRUE):
+  1. A user can copy a personalized Claude Desktop config and follow instructions to connect successfully
+  2. An admin can view audit log, per-token usage, and revision history (actor + action) from the UI
+  3. An admin can change token defaults, templates, and setup snippets from the UI with changes taking effect
+  4. No UI surface exposes or edits infra secrets (Horizon env vars, Supabase keys)
+**Plans:** TBD during `/gsd-plan-phase 13`
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -215,6 +273,10 @@ Wave structure:
 | 7. Note CRUD Operations | 2/2 | Complete | 2026-10-10 |
 | 8. Tag Management & Templates | 2/2 | Complete    | 2026-10-10 |
 | 9. Integration & Hardening | 4/5 | In Progress | - |
+| 10. Portal Auth & Shell | 1/2 | In Progress|  |
+| 11. Token Self-Serve & Admin | 0/0 | Not started | - |
+| 12. KB Browse & Edit | 0/0 | Not started | - |
+| 13. Setup, Activity & Settings | 0/0 | Not started | - |
 
 ## Coverage
 
@@ -243,5 +305,29 @@ Wave structure:
 | STOR-01 | Phase 1 |
 | STOR-02 | Phase 1 |
 | STOR-03 | Phase 2 |
+| PORT-01 | Phase 10 |
+| PORT-02 | Phase 10 |
+| PORT-03 | Phase 10 |
+| TOK-01 | Phase 11 |
+| TOK-02 | Phase 11 |
+| TOK-03 | Phase 11 |
+| TOK-04 | Phase 11 |
+| TOK-05 | Phase 11 |
+| TOK-06 | Phase 11 |
+| BROW-01 | Phase 12 |
+| BROW-02 | Phase 12 |
+| BROW-03 | Phase 12 |
+| EDIT-01 | Phase 12 |
+| EDIT-02 | Phase 12 |
+| EDIT-03 | Phase 12 |
+| EDIT-04 | Phase 12 |
+| SETUP-01 | Phase 13 |
+| SETUP-02 | Phase 13 |
+| ACT-01 | Phase 13 |
+| ACT-02 | Phase 13 |
+| ACT-03 | Phase 13 |
+| CONF-01 | Phase 13 |
+| CONF-02 | Phase 13 |
+| CONF-03 | Phase 13 |
 
-**Total:** 23/23 requirements mapped (100%)
+**Total:** 23/23 v1 requirements mapped (100%) + 24/24 v3.0 requirements mapped (100%)

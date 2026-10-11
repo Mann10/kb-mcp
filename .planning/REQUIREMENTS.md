@@ -1,67 +1,77 @@
-# Requirements: Knowledge Base MCP Server
+# Requirements: Knowledge Base MCP Server — v3.0 UIF Token Portal
 
-**Defined:** 2026-10-09
+**Defined:** 2026-10-11
 **Core Value:** Enable AI assistants to search and read personal notes while ensuring only authorized users can modify the knowledge base.
 
-## v1 Requirements
+## v3.0 Requirements
 
-Requirements for initial release. Each maps to roadmap phases.
+Token portal + control panel (separate frontend). Every requirement maps to the v3 roadmap (phases 10+).
 
-### Authentication
+### Portal Auth
 
-- [ ] **AUTH-01**: Separate read-only and read+write tokens enforced on all tools
-- [ ] **AUTH-02**: Token verification middleware validates token on every tool call
-- [x] **AUTH-03**: CLI tool generates new tokens with specified permission level
-- [x] **AUTH-04**: CLI tool revokes existing tokens
-- [x] **AUTH-05**: CLI tool lists all active tokens
-- [x] **AUTH-06**: Token rotation revokes old token and generates new one in single step
-- [x] **AUTH-07**: Tokens support configurable TTL with expiration enforcement
+- [ ] **PORT-01**: User can sign up / log in with email via the UI
+- [ ] **PORT-02**: User session persists across browser refresh in the UI
+- [x] **PORT-03**: Admin role gates all approve/mint/revoke and settings actions in the UI
 
-### Read Tools
+### Token Self-Serve & Admin
 
-- [x] **READ-01**: Search notes by keyword returning matching snippets
-- [x] **READ-02**: Get full note content by title
-- [x] **READ-03**: List all notes with metadata only (title, tags, date)
-- [x] **READ-04**: Browse all tags across notes
-- [x] **READ-05**: Filter search results by tag
-- [x] **READ-06**: Filter search results by date range
+- [ ] **TOK-01**: Logged-in user can self-serve a new read-only token from the UI
+- [ ] **TOK-02**: Logged-in user can view their own tokens (masked value, type, created, expiry, status)
+- [ ] **TOK-03**: Logged-in user can request a write-token upgrade from the UI
+- [ ] **TOK-04**: Admin can approve or deny write-token requests from a queue in the UI
+- [ ] **TOK-05**: Admin can directly mint a read or read-write token for any user from the UI
+- [ ] **TOK-06**: Admin can revoke, rotate, and list all tokens from the UI (parity with CLI lifecycle)
 
-### Write Tools
+### KB Browsing
 
-- [x] **WRITE-01**: Create new note with YAML frontmatter and markdown body
-- [x] **WRITE-02**: Update existing note content
-- [x] **WRITE-03**: Update existing note metadata (title, tags, dates)
-- [x] **WRITE-04**: Delete note by title
-- [x] **WRITE-05**: Add tags to a note
-- [x] **WRITE-06**: Remove tags from a note
-- [x] **WRITE-07**: Note templates for common note types (meeting, book, idea)
+- [ ] **BROW-01**: User can search notes by keyword from the UI with snippets
+- [ ] **BROW-02**: User can read full note content from the UI
+- [ ] **BROW-03**: User can list notes with metadata and browse tags from the UI
 
-### Storage
+### KB Editing
 
-- [x] **STOR-01**: Parse and validate YAML frontmatter metadata
-- [x] **STOR-02**: Store notes as markdown files on disk (no database)
-- [x] **STOR-03**: Git versioning integration for note history
+- [ ] **EDIT-01**: Write-authorized user can create a note (incl. from meeting/book/idea template) from the UI
+- [ ] **EDIT-02**: Write-authorized user can update note content and metadata from the UI
+- [ ] **EDIT-03**: Write-authorized user can delete a note from the UI
+- [ ] **EDIT-04**: Write-authorized user can add/remove tags from the UI
 
-## v2 Requirements
+### Client Setup
 
-Deferred to future release. Tracked but not in current roadmap.
+- [ ] **SETUP-01**: User gets a personalized Claude Desktop config snippet (Horizon URL + headers + their token) from the UI
+- [ ] **SETUP-02**: User gets step-by-step connect instructions (mcp-remote, Horizon key, restart) from the UI
 
-### Advanced Features
+### Activity
 
-- **ADV-01**: Note backlinks / related notes discovery
-- **ADV-02**: Bulk import from markdown files
-- **ADV-03**: SQLite FTS5 full-text search index
-- **ADV-04**: Web UI for browsing notes
-- **ADV-05**: Multi-tenant architecture
+- [ ] **ACT-01**: Admin can view the audit log (who called what, when) from the UI
+- [ ] **ACT-02**: Admin can view note revision history (actor, action, snapshot) from the UI
+- [ ] **ACT-03**: Admin can view per-token usage (last used, call counts) from the UI
+
+### Settings
+
+- [ ] **CONF-01**: Admin can manage token defaults (default TTL, default type) from the UI
+- [ ] **CONF-02**: Admin can manage note templates (meeting/book/idea skeletons + default tags) from the UI
+- [ ] **CONF-03**: Admin can manage client setup snippets (Horizon URL, header format, instructions text) from the UI
+
+## Future Requirements
+
+Deferred beyond v3.0. Tracked but not in current roadmap.
+
+### UIF Next
+
+- **UIF-01**: Bulk import of local markdown notes into Supabase from the UI
+- **UIF-02**: Per-note ACLs (share individual notes with specific users)
+- **UIF-03**: In-UI diff view of revision snapshots with restore
+- **UIF-04**: Email notifications on token request / approval
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Real-time collaboration | Single-user write model, no conflict resolution needed |
-| Web UI for editing | MCP tools are the interface |
-| External embedding services | Adds complexity, not core value |
-| Database backend | File-based storage sufficient for personal KB scale |
+| Infra/env editing from UI (Horizon env vars, Supabase connection strings) | Secrets must stay in Horizon dashboard; UI never touches infra — decided in brainstorming |
+| Open (login-free) token minting | Abuse risk; login gate + admin approval preserves single-writer trust model |
+| Real-time collaboration | Single-user write model unchanged from v1 |
+| Multi-tenancy / RLS policies | Single-tenant personal KB; service_role bypass stands |
+| Native mobile app | Web UI first; mobile later if ever |
 
 ## Traceability
 
@@ -69,35 +79,41 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 3 | Pending |
-| AUTH-02 | Phase 3 | Pending |
-| AUTH-03 | Phase 4 | Complete (04-02) |
-| AUTH-04 | Phase 4 | Complete (04-02) |
-| AUTH-05 | Phase 4 | Complete (04-02) |
-| AUTH-06 | Phase 4 | Complete (04-02) |
-| AUTH-07 | Phase 4 | Complete (04-02) |
-| READ-01 | Phase 5 | Complete (05-01) |
-| READ-02 | Phase 5 | Complete (05-01) |
-| READ-03 | Phase 5 | Complete (05-02) |
-| READ-04 | Phase 5 | Complete (05-02) |
-| READ-05 | Phase 6 | Complete (06-01) |
-| READ-06 | Phase 6 | Complete (06-02) |
-| WRITE-01 | Phase 7 | Complete (07-01) |
-| WRITE-02 | Phase 7 | Complete (07-02) |
-| WRITE-03 | Phase 7 | Complete (07-02) |
-| WRITE-04 | Phase 7 | Complete (07-01) |
-| WRITE-05 | Phase 8 | Complete (08-01) |
-| WRITE-06 | Phase 8 | Complete (08-01) |
-| WRITE-07 | Phase 8 | Complete (08-02) |
-| STOR-01 | Phase 1 | Complete |
-| STOR-02 | Phase 1 | Pending |
-| STOR-03 | Phase 2 | Complete |
+| PORT-01 | Phase 10 | Pending |
+| PORT-02 | Phase 10 | Pending |
+| PORT-03 | Phase 10 | Complete |
+| TOK-01 | Phase 11 | Pending |
+| TOK-02 | Phase 11 | Pending |
+| TOK-03 | Phase 11 | Pending |
+| TOK-04 | Phase 11 | Pending |
+| TOK-05 | Phase 11 | Pending |
+| TOK-06 | Phase 11 | Pending |
+| BROW-01 | Phase 12 | Pending |
+| BROW-02 | Phase 12 | Pending |
+| BROW-03 | Phase 12 | Pending |
+| EDIT-01 | Phase 12 | Pending |
+| EDIT-02 | Phase 12 | Pending |
+| EDIT-03 | Phase 12 | Pending |
+| EDIT-04 | Phase 12 | Pending |
+| SETUP-01 | Phase 13 | Pending |
+| SETUP-02 | Phase 13 | Pending |
+| ACT-01 | Phase 13 | Pending |
+| ACT-02 | Phase 13 | Pending |
+| ACT-03 | Phase 13 | Pending |
+| CONF-01 | Phase 13 | Pending |
+| CONF-02 | Phase 13 | Pending |
+| CONF-03 | Phase 13 | Pending |
 
 **Coverage:**
-- v1 requirements: 23 total
-- Mapped to phases: 23
+- v3.0 requirements: 24 total
+- Mapped to phases: 24
 - Unmapped: 0 ✓
 
+## Prior Milestones
+
+- **v1.0** (complete): 23 requirements (AUTH-01..07, READ-01..06, WRITE-01..07, STOR-01..03) — local FastMCP server, CLI tokens, read/write tools, git versioning, hardening.
+- **v2** (deployed per owner 2026-10-11): stateless Supabase backend + Horizon live deploy (`HORIZON_DEPLOY.md`, `supabase/migrations/`, `horizon_entry.py`).
+
 ---
-*Requirements defined: 2026-10-09*
-*Last updated: 2026-10-09 after initial definition*
+*Requirements defined: 2026-10-11*
+*Last updated: 2026-10-11 after v3.0 scoping*
