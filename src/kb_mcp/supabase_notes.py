@@ -110,6 +110,24 @@ class SupabaseNoteRepository:
             body=body,
         )
 
+    def list_stems(self) -> list[str]:
+        """Sorted note stems for enumeration (mirrors filesystem listing)."""
+        try:
+            with connect() as conn, conn.cursor() as cur:
+                cur.execute("SELECT stem FROM notes ORDER BY stem")
+                return [row[0] for row in cur.fetchall()]
+        except Exception:
+            return []
+
+    def stem_exists(self, stem: str) -> bool:
+        """True when a note with this stem exists."""
+        try:
+            with connect() as conn, conn.cursor() as cur:
+                cur.execute("SELECT 1 FROM notes WHERE stem = %s", (stem,))
+                return cur.fetchone() is not None
+        except Exception:
+            return False
+
     def list_notes(self) -> list[NoteMetadata]:
         try:
             with connect() as conn, conn.cursor() as cur:

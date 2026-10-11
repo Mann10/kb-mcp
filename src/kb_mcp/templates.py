@@ -184,10 +184,12 @@ def configure_template_store(store: TemplateStore | None) -> None:
 
 
 def get_template_store() -> TemplateStore:
-    """Return the injected store, or a fresh ``TemplateStore.load()``."""
+    """Return the injected store, the backend default, or a fresh file store."""
     if _configured_store is not None:
         return _configured_store
-    return TemplateStore.load()
+    from .backend import get_template_store as get_backend_template_store
+
+    return get_backend_template_store()
 
 
 def _unknown_message(name) -> str:
@@ -222,6 +224,7 @@ def create_template(
     *,
     token=None,
     _store=None,
+    actor: str | None = None,
 ) -> dict:
     """Create a template; reject duplicates with a structured exists-error."""
     norm = normalize_name(name)
@@ -258,6 +261,7 @@ def update_template(
     *,
     token=None,
     _store=None,
+    actor: str | None = None,
 ) -> dict:
     """Partially update a template; no-op update is success (no-changes)."""
     norm = normalize_name(name)
@@ -296,7 +300,7 @@ def update_template(
 
 
 @require_write
-def delete_template(name: str, *, token=None, _store=None) -> dict:
+def delete_template(name: str, *, token=None, _store=None, actor: str | None = None) -> dict:
     """Delete a template by name; missing is a structured unknown-error."""
     norm = normalize_name(name)
     if norm is None:

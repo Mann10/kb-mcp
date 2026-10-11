@@ -81,6 +81,8 @@ class NoteRepository:
         body: str,
         tags: list[str],
         created: str,
+        *,
+        actor: str = "unknown",
     ) -> Note:
         validate_path(self.notes_dir, filename)
         validate_filename(filename)
@@ -101,11 +103,33 @@ class NoteRepository:
             NoteSnapshot(
                 stem=path.stem, title=title, body=body, tags=tags, created=created
             ),
-            actor="unknown",
+            actor=actor,
         )
 
         metadata = NoteMetadata(title=title, tags=tags, created=created)
         return Note(filename=path.stem, metadata=metadata, body=body)
+
+    def list_stems(self) -> list[str]:
+        """Sorted note stems (filenames without ``.md``) for enumeration.
+
+        Backend-agnostic listing used by tools instead of touching
+        ``notes_dir`` directly, so Supabase-backed repos work unchanged.
+        """
+        try:
+            return sorted(
+                p.stem
+                for p in self.notes_dir.iterdir()
+                if p.is_file() and p.suffix == ".md"
+            )
+        except OSError:
+            return []
+
+    def stem_exists(self, stem: str) -> bool:
+        """True when a note with this stem exists (OSError-safe)."""
+        try:
+            return (self.notes_dir / (stem + ".md")).exists()
+        except OSError:
+            return False
 
     def list_notes(self) -> list[NoteMetadata]:
         notes: list[NoteMetadata] = []
@@ -122,7 +146,7 @@ class NoteRepository:
                 continue
         return sorted(notes, key=lambda n: n.created)
 
-    def delete_note(self, filename: str) -> None:
+    def delete_note(self, filename: str, *, actor: str = "unknown") -> None:
         validate_path(self.notes_dir, filename)
         validate_filename(filename)
         path = validate_path(self.notes_dir, filename)
@@ -140,7 +164,7 @@ class NoteRepository:
         self._history.record(
             "delete",
             NoteSnapshot(stem=path.stem, title="", body="", tags=[], created="2000-01-01"),
-            actor="unknown",
+            actor=actor,
         )
 
     def update_note(
@@ -150,6 +174,8 @@ class NoteRepository:
         body: str | None = None,
         tags: list[str] | None = None,
         created: str | None = None,
+        *,
+        actor: str = "unknown",
     ) -> Note:
         from .errors import InvalidTypeError
 
@@ -164,7 +190,10 @@ class NoteRepository:
         validated = NoteMetadata(title=new_title, tags=new_tags, created=new_created)
 
         if title is None:
-            return self.write_note(filename, validated.title, new_body, validated.tags, validated.created)
+            return self.write_note(
+                filename, validated.title, new_body, validated.tags,
+                validated.created, actor=actor,
+            )
 
         new_stem = _slugify_stem(title)
         if new_stem is None:
@@ -173,7 +202,10 @@ class NoteRepository:
 
         old_stem = Path(filename).stem
         if new_stem == old_stem:
-            return self.write_note(filename, validated.title, new_body, validated.tags, validated.created)
+            return self.write_note(
+                filename, validated.title, new_body, validated.tags,
+                validated.created, actor=actor,
+            )
 
         if (self.notes_dir / (new_stem + ".md")).exists():
             raise FileExistsError(f"rename target '{new_stem}' already exists")
@@ -205,7 +237,7 @@ class NoteRepository:
                 tags=validated.tags,
                 created=validated.created,
             ),
-            actor="unknown",
+            actor=actor,
             old_stem=old_stem,
         )
 

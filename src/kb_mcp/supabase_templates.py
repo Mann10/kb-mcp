@@ -19,12 +19,23 @@ logger = logging.getLogger(__name__)
 class SupabaseTemplateStore:
     """Template registry over Supabase Postgres; built-ins always present."""
 
+    _seeded: bool = False
+
     @classmethod
     def load(cls) -> "SupabaseTemplateStore":
-        """Return a store bound to SUPABASE_DB_URL, seeding built-ins."""
-        store = cls()
-        store._seed_builtins()
-        return store
+        """Return a store bound to SUPABASE_DB_URL (no I/O until first use).
+
+        Seeding is lazy on purpose: Horizon's build inspects the entrypoint by
+        importing it, possibly without database access. The first real method
+        call seeds the built-ins idempotently.
+        """
+        return cls()
+
+    def _ensure_seeded(self) -> None:
+        if SupabaseTemplateStore._seeded:
+            return
+        self._seed_builtins()
+        SupabaseTemplateStore._seeded = True
 
     def _seed_builtins(self) -> None:
         with connect() as conn, conn.cursor() as cur:
@@ -36,18 +47,21 @@ class SupabaseTemplateStore:
                 )
 
     def __len__(self) -> int:
+        self._ensure_seeded()
         with connect() as conn, conn.cursor() as cur:
             cur.execute("SELECT count(*) FROM templates")
             return cur.fetchone()[0]
 
     def names(self) -> list[str]:
         """Sorted template names for deterministic output."""
+        self._ensure_seeded()
         with connect() as conn, conn.cursor() as cur:
             cur.execute("SELECT name FROM templates")
             return sorted(row[0] for row in cur.fetchall())
 
     def get(self, name: str) -> dict | None:
         """Return the spec for a normalized name, or None."""
+        self._ensure_seeded()
         with connect() as conn, conn.cursor() as cur:
             cur.execute(
                 "SELECT body_skeleton, default_tags FROM templates WHERE name = %s",
@@ -66,6 +80,7 @@ class SupabaseTemplateStore:
         default_tags: list[str] | None = None,
     ) -> str:
         """Add a template; raises KeyError when the name already exists."""
+        self._ensure_seeded()
         if self.get(name) is not None:
             raise KeyError(f"Template '{name}' already exists.")
         try:
@@ -90,6 +105,7 @@ class SupabaseTemplateStore:
         default_tags: list[str] | None = None,
     ) -> str:
         """Partially update a template; raises KeyError when missing."""
+        self._ensure_seeded()
         with connect() as conn, conn.cursor() as cur:
             parts: list[str] = []
             params: list = []
@@ -113,6 +129,7 @@ class SupabaseTemplateStore:
 
     def remove(self, name: str) -> str:
         """Delete a template; raises KeyError when missing."""
+        self._ensure_seeded()
         with connect() as conn, conn.cursor() as cur:
             cur.execute("DELETE FROM templates WHERE name = %s", (name,))
             if cur.rowcount == 0:

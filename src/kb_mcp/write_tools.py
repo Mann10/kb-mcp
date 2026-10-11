@@ -18,24 +18,27 @@ from .middleware import (
     WRITE_DENIED_MESSAGE,  # noqa: F401  (re-exported for tests)
     require_write,
 )
+from .backend import NoteRepo
 from .storage import NoteRepository
 from .templates import get_template_store
 from .validation import validate_filename
 
-_default_repo: NoteRepository | None = None
+_default_repo: NoteRepo | None = None
 
 
-def configure_default_repo(repo: NoteRepository | None) -> None:
+def configure_default_repo(repo: NoteRepo | None) -> None:
     """Set the module-level default repo used when test injection is needed."""
     global _default_repo
     _default_repo = repo
 
 
-def _resolve_repo() -> NoteRepository:
-    """Return the injected repo, or a default ``NoteRepository()``."""
+def _resolve_repo() -> NoteRepo:
+    """Return the injected repo, the backend default, or a filesystem default."""
     if _default_repo is not None:
         return _default_repo
-    return NoteRepository()
+    from .backend import get_note_repository
+
+    return get_note_repository()
 
 
 def _slugify_title(title: str) -> str | None:
@@ -50,7 +53,7 @@ def _slugify_title(title: str) -> str | None:
     return s + ".md"
 
 
-def _resolve_stem(repo: NoteRepository, name: str) -> str | None:
+def _resolve_stem(repo: NoteRepo, name: str) -> str | None:
     """Resolve a user-supplied name to a canonical stem (D-07 mirror).
 
     Case-insensitive stem match first, then display-title fallback over
@@ -65,11 +68,7 @@ def _resolve_stem(repo: NoteRepository, name: str) -> str | None:
     if not wanted:
         return None
     try:
-        stem_map = {
-            p.stem.lower(): p.stem
-            for p in repo.notes_dir.iterdir()
-            if p.is_file() and p.suffix == ".md"
-        }
+        stem_map = {stem.lower(): stem for stem in repo.list_stems()}
     except OSError:
         stem_map = {}
     hit = stem_map.get(wanted.lower())
@@ -95,6 +94,7 @@ def create_note(
     *,
     token=None,
     _store=None,
+    actor: str | None = None,
 ) -> dict:
     """Create a new note; reject collisions with a structured exists-error."""
     repo = _resolve_repo()
@@ -125,11 +125,14 @@ def create_note(
         validate_filename(filename)
     except InvalidTypeError:
         return {"success": False, "message": "Invalid title: must slugify to a safe filename."}
-    if (repo.notes_dir / filename).exists():
+    if repo.stem_exists(filename[:-3]):
         stem = filename[:-3]
         return {"success": False, "message": f"Note '{display_title}' already exists as {stem}."}
     try:
-        note = repo.write_note(filename, display_title, body, list(normalized_tags), created)
+        note = repo.write_note(
+            filename, display_title, body, list(normalized_tags), created,
+            actor=actor or "unknown",
+        )
     except InvalidTypeError as e:
         return {"success": False, "message": f"Invalid note field: {e}."}
     return {
@@ -143,14 +146,14 @@ def create_note(
 
 
 @require_write
-def delete_note(title: str, *, token=None, _store=None) -> dict:
+def delete_note(title: str, *, token=None, _store=None, actor: str | None = None) -> dict:
     """Delete a note by title/stem; missing notes are structured not-found."""
     repo = _resolve_repo()
     stem = _resolve_stem(repo, title) if isinstance(title, str) else None
     if stem is None:
         return {"success": False, "message": f"Note '{title}' not found."}
     try:
-        repo.delete_note(stem + ".md")
+        repo.delete_note(stem + ".md", actor=actor or "unknown")
     except NoteNotFoundError:
         return {"success": False, "message": f"Note '{title}' not found."}
     return {"success": True, "filename": stem, "message": f"Note '{stem}' deleted."}
@@ -166,6 +169,7 @@ def update_note(
     *,
     token=None,
     _store=None,
+    actor: str | None = None,
 ) -> dict:
     """Update content/metadata of an existing note; rename on new_title."""
     repo = _resolve_repo()
@@ -212,7 +216,7 @@ def update_note(
     if new_title is not None:
         slug_file = _slugify_title(new_title)
         slug = slug_file[:-3] if slug_file is not None else None
-        if slug is not None and slug != real_stem and (repo.notes_dir / (slug + ".md")).exists():
+        if slug is not None and slug != real_stem and repo.stem_exists(slug):
             return {"success": False, "message": f"Note '{new_title.strip()}' already exists as '{slug}'. Rename rejected."}
     try:
         note = repo.update_note(
@@ -221,6 +225,7 @@ def update_note(
             body=body,
             tags=(list(tags) if tags is not None else None),
             created=created,
+            actor=actor or "unknown",
         )
     except NoteNotFoundError:
         return {"success": False, "message": f"Note '{title}' not found."}
@@ -256,7 +261,7 @@ def _validate_tag_list(tags) -> str | None:
 
 
 @require_write
-def add_tags(title: str, tags: list[str], *, token=None, _store=None) -> dict:
+def add_tags(title: str, tags: list[str], *, token=None, _store=None, actor: str | None = None) -> dict:
     """Add tags to an existing note; duplicates are idempotent success (D-02/D-05/D-06)."""
     repo = _resolve_repo()
     invalid = _validate_tag_list(tags)
@@ -288,7 +293,7 @@ def add_tags(title: str, tags: list[str], *, token=None, _store=None) -> dict:
             "message": f"No changes — note '{note.metadata.title}' already has those tags.",
         }
     try:
-        updated = repo.update_note(real_stem + ".md", tags=merged)
+        updated = repo.update_note(real_stem + ".md", tags=merged, actor=actor or "unknown")
     except NoteNotFoundError:
         return {"success": False, "message": f"Note '{title}' not found."}
     except (InvalidTypeError, ValueError) as e:
@@ -304,7 +309,7 @@ def add_tags(title: str, tags: list[str], *, token=None, _store=None) -> dict:
 
 
 @require_write
-def remove_tags(title: str, tags: list[str], *, token=None, _store=None) -> dict:
+def remove_tags(title: str, tags: list[str], *, token=None, _store=None, actor: str | None = None) -> dict:
     """Remove tags from an existing note; missing tags are idempotent success (D-03/D-08)."""
     repo = _resolve_repo()
     invalid = _validate_tag_list(tags)
@@ -331,7 +336,7 @@ def remove_tags(title: str, tags: list[str], *, token=None, _store=None) -> dict
             "message": f"No changes — note '{note.metadata.title}' already lacks those tags.",
         }
     try:
-        updated = repo.update_note(real_stem + ".md", tags=kept)
+        updated = repo.update_note(real_stem + ".md", tags=kept, actor=actor or "unknown")
     except NoteNotFoundError:
         return {"success": False, "message": f"Note '{title}' not found."}
     except (InvalidTypeError, ValueError) as e:
@@ -356,6 +361,7 @@ def create_from_template(
     *,
     token=None,
     _store=None,
+    actor: str | None = None,
 ) -> dict:
     """Create a new note from a template skeleton with override merge (D-09..D-16)."""
     repo = _resolve_repo()
@@ -412,11 +418,14 @@ def create_from_template(
         validate_filename(filename)
     except InvalidTypeError:
         return {"success": False, "message": "Invalid title: must slugify to a safe filename."}
-    if (repo.notes_dir / filename).exists():
+    if repo.stem_exists(filename[:-3]):
         stem = filename[:-3]
         return {"success": False, "message": f"Note '{display_title}' already exists as {stem}."}
     try:
-        note = repo.write_note(filename, display_title, effective_body, list(effective_tags), created)
+        note = repo.write_note(
+            filename, display_title, effective_body, list(effective_tags), created,
+            actor=actor or "unknown",
+        )
     except InvalidTypeError as e:
         return {"success": False, "message": f"Invalid note field: {e}."}
     return {

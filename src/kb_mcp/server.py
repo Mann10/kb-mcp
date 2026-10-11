@@ -19,6 +19,9 @@ from fastmcp import FastMCP
 
 from kb_mcp.audit import log_denial, log_read, log_write, mask_token
 from kb_mcp.auth import TokenStore
+from kb_mcp.backend import get_token_store, use_supabase
+from kb_mcp.supabase_audit import audit_write_db
+from kb_mcp.supabase_auth import SupabaseTokenStore
 from kb_mcp.errors import AuthenticationError, AuthorizationError
 from kb_mcp.middleware import INVALID_TOKEN_MESSAGE, verify_token
 from kb_mcp.rate_limit import RATE_LIMIT_MESSAGE, check_rate_limit, owner_key
@@ -130,7 +133,7 @@ def get_request_token() -> str | None:
 def _invoke(
     tool_name: str,
     gated_fn: Callable[..., dict],
-    store: TokenStore,
+    store: TokenStore | SupabaseTokenStore,
     kwargs: dict,
     is_write: bool,
     filename_of: Callable[[dict], str] | None = None,
@@ -155,7 +158,10 @@ def _invoke(
         log_denial("rate-limit", user, tool_name, mask_token(raw))
         return {"success": False, "message": RATE_LIMIT_MESSAGE}
     try:
-        result = gated_fn(**kwargs, token=raw, _store=store)
+        if is_write:
+            result = gated_fn(**kwargs, token=raw, _store=store, actor=user)
+        else:
+            result = gated_fn(**kwargs, token=raw, _store=store)
     except (AuthenticationError, AuthorizationError) as e:
         log_denial("auth", user, tool_name, mask_token(raw))
         return {"success": False, "message": str(e)}
@@ -170,7 +176,10 @@ def _invoke(
                 filename = tool_name
         else:
             filename = tool_name
-        log_write(user, tool_name, filename)
+        if use_supabase():
+            audit_write_db(user, tool_name, filename)
+        else:
+            log_write(user, tool_name, filename)
     else:
         log_read(tool_name)
     return result
@@ -206,7 +215,7 @@ def search_notes(
     return _invoke(
         "search_notes",
         _search_notes_gated,
-        TokenStore.load(),
+        get_token_store(),
         {"query": query, "limit": limit, "tag": tag, "date_from": date_from, "date_to": date_to},
         is_write=False,
     )
@@ -215,19 +224,19 @@ def search_notes(
 @mcp.tool()
 def get_note(title: str) -> dict:
     """Retrieve a single note by case-insensitive title/stem lookup."""
-    return _invoke("get_note", _get_note_gated, TokenStore.load(), {"title": title}, is_write=False)
+    return _invoke("get_note", _get_note_gated, get_token_store(), {"title": title}, is_write=False)
 
 
 @mcp.tool()
 def list_notes() -> dict:
     """List all notes with metadata only (no bodies)."""
-    return _invoke("list_notes", _list_notes_gated, TokenStore.load(), {}, is_write=False)
+    return _invoke("list_notes", _list_notes_gated, get_token_store(), {}, is_write=False)
 
 
 @mcp.tool()
 def get_tags() -> dict:
     """Browse tags across all notes, frequency-sorted."""
-    return _invoke("get_tags", _get_tags_gated, TokenStore.load(), {}, is_write=False)
+    return _invoke("get_tags", _get_tags_gated, get_token_store(), {}, is_write=False)
 
 
 @mcp.tool()
@@ -241,7 +250,7 @@ def create_note(
     return _invoke(
         "create_note",
         _create_note_gated,
-        TokenStore.load(),
+        get_token_store(),
         {"title": title, "body": body, "tags": tags, "created": created},
         is_write=True,
         filename_of=lambda r: r.get("filename", "create_note"),
@@ -260,7 +269,7 @@ def update_note(
     return _invoke(
         "update_note",
         _update_note_gated,
-        TokenStore.load(),
+        get_token_store(),
         {"title": title, "new_title": new_title, "body": body, "tags": tags, "created": created},
         is_write=True,
         filename_of=lambda r: r.get("filename", "update_note"),
@@ -273,7 +282,7 @@ def delete_note(title: str) -> dict:
     return _invoke(
         "delete_note",
         _delete_note_gated,
-        TokenStore.load(),
+        get_token_store(),
         {"title": title},
         is_write=True,
         filename_of=lambda r: r.get("filename", "delete_note"),
@@ -286,7 +295,7 @@ def add_tags(title: str, tags: list[str]) -> dict:
     return _invoke(
         "add_tags",
         _add_tags_gated,
-        TokenStore.load(),
+        get_token_store(),
         {"title": title, "tags": tags},
         is_write=True,
         filename_of=lambda r: r.get("filename", "add_tags"),
@@ -299,7 +308,7 @@ def remove_tags(title: str, tags: list[str]) -> dict:
     return _invoke(
         "remove_tags",
         _remove_tags_gated,
-        TokenStore.load(),
+        get_token_store(),
         {"title": title, "tags": tags},
         is_write=True,
         filename_of=lambda r: r.get("filename", "remove_tags"),
@@ -318,7 +327,7 @@ def create_from_template(
     return _invoke(
         "create_from_template",
         _create_from_template_gated,
-        TokenStore.load(),
+        get_token_store(),
         {"template": template, "title": title, "body": body, "tags": tags, "created": created},
         is_write=True,
         filename_of=lambda r: r.get("filename", "create_from_template"),
@@ -328,7 +337,7 @@ def create_from_template(
 @mcp.tool()
 def list_templates() -> dict:
     """List all note templates with skeletons and default tags."""
-    return _invoke("list_templates", _list_templates_gated, TokenStore.load(), {}, is_write=False)
+    return _invoke("list_templates", _list_templates_gated, get_token_store(), {}, is_write=False)
 
 
 @mcp.tool()
@@ -341,7 +350,7 @@ def create_template(
     return _invoke(
         "create_template",
         _create_template_gated,
-        TokenStore.load(),
+        get_token_store(),
         {"name": name, "body_skeleton": body_skeleton, "default_tags": default_tags},
         is_write=True,
         filename_of=lambda r: r.get("name", "create_template"),
@@ -358,7 +367,7 @@ def update_template(
     return _invoke(
         "update_template",
         _update_template_gated,
-        TokenStore.load(),
+        get_token_store(),
         {"name": name, "body_skeleton": body_skeleton, "default_tags": default_tags},
         is_write=True,
         filename_of=lambda r: r.get("name", "update_template"),
@@ -371,7 +380,7 @@ def delete_template(name: str) -> dict:
     return _invoke(
         "delete_template",
         _delete_template_gated,
-        TokenStore.load(),
+        get_token_store(),
         {"name": name},
         is_write=True,
         filename_of=lambda r: r.get("name", "delete_template"),
@@ -380,12 +389,19 @@ def delete_template(name: str) -> dict:
 
 def serve(host: str = "0.0.0.0", port: int = 8000, notes_dir: str | None = None) -> None:
     """Start the MCP server on streamable-http after fail-fast checks (D-01/D-06)."""
-    resolved = ensure_notes_dir(resolve_notes_dir(notes_dir))
+    from kb_mcp.backend import get_note_repository
     from kb_mcp.read_tools import configure_default_repo as configure_read_repo
-    from kb_mcp.storage import NoteRepository
     from kb_mcp.write_tools import configure_default_repo as configure_write_repo
 
-    repo = NoteRepository(notes_dir=resolved)
+    if use_supabase():
+        # No local notes directory needed — state lives in Supabase.
+        repo = get_note_repository()
+        resolved = "supabase"
+    else:
+        resolved = ensure_notes_dir(resolve_notes_dir(notes_dir))
+        from kb_mcp.storage import NoteRepository
+
+        repo = NoteRepository(notes_dir=resolved)
     configure_read_repo(repo)
     configure_write_repo(repo)
     logger.info("transport=streamable-http host=%s port=%s notes_dir=%s", host, port, resolved)

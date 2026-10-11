@@ -16,8 +16,10 @@ app = typer.Typer(help="Manage knowledge-base MCP tokens.")
 
 
 def _get_store() -> TokenStore:
-    """Load the token store (KB_TOKENS_FILE honored inside TokenStore.load)."""
-    return TokenStore.load()
+    """Load the token store for the active backend (KB_BACKEND dispatches)."""
+    from kb_mcp.backend import get_token_store
+
+    return get_token_store()
 
 
 def _normalize_type(v: str) -> TokenType:

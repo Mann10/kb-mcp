@@ -11,26 +11,28 @@ import datetime
 from .errors import NoteNotFoundError
 from .middleware import require_read
 from .parsing import parse_frontmatter  # noqa: F401  (re-exported contract import)
-from .storage import NoteRepository
+from .backend import NoteRepo
 
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 50
 SNIPPET_CONTEXT = 120
 
-_default_repo: NoteRepository | None = None
+_default_repo: NoteRepo | None = None
 
 
-def configure_default_repo(repo: NoteRepository | None) -> None:
+def configure_default_repo(repo: NoteRepo | None) -> None:
     """Set the module-level default repo used when test injection is needed."""
     global _default_repo
     _default_repo = repo
 
 
-def _resolve_repo() -> NoteRepository:
-    """Return the injected repo, or a default ``NoteRepository()``."""
+def _resolve_repo() -> NoteRepo:
+    """Return the injected repo, the backend default, or a filesystem default."""
     if _default_repo is not None:
         return _default_repo
-    return NoteRepository()
+    from .backend import get_note_repository
+
+    return get_note_repository()
 
 
 def _build_snippet(body: str, q: str, hit_index: int) -> str:
@@ -71,11 +73,7 @@ def search_notes(query: str = "", limit: int = 10, tag: str | None = None, date_
     if not q and not tag_active and not date_active:
         return {"results": [], "message": f"No notes found matching '{query}'."}
     try:
-        stems = sorted(
-            p.stem
-            for p in repo.notes_dir.iterdir()
-            if p.is_file() and p.suffix == ".md"
-        )
+        stems = repo.list_stems()
     except OSError:
         stems = []
     ranked: list[tuple[int, str, dict]] = []
@@ -161,22 +159,13 @@ def search_notes(query: str = "", limit: int = 10, tag: str | None = None, date_
 def list_notes(*, token=None, _store=None) -> dict:
     """List all notes with metadata only (no bodies), created-ascending."""
     repo = _resolve_repo()
-    try:
-        files = [
-            p
-            for p in repo.notes_dir.iterdir()
-            if p.is_file() and p.suffix == ".md"
-        ]
-    except OSError:
-        files = []
     pairs = []
-    for path in files:
+    for stem in repo.list_stems():
         try:
-            content = path.read_text(encoding="utf-8-sig")
-            metadata, _ = parse_frontmatter(content, path.name)
+            note = repo.read_note(stem + ".md")
         except Exception:
             continue
-        pairs.append((metadata, path.stem))
+        pairs.append((note.metadata, stem))
     pairs.sort(key=lambda item: item[0].created)
     if not pairs:
         return {"notes": [], "message": "No notes found."}
@@ -196,22 +185,14 @@ def list_notes(*, token=None, _store=None) -> dict:
 def get_tags(*, token=None, _store=None) -> dict:
     """Browse tags across all notes, frequency-sorted and case-normalized."""
     repo = _resolve_repo()
-    try:
-        files = [
-            p
-            for p in repo.notes_dir.iterdir()
-            if p.is_file() and p.suffix == ".md"
-        ]
-    except OSError:
-        files = []
     counts: dict[str, int] = {}
     display: dict[str, str] = {}
-    for path in sorted(files, key=lambda p: p.name):
+    for stem in repo.list_stems():
         try:
-            content = path.read_text(encoding="utf-8-sig")
-            metadata, _ = parse_frontmatter(content, path.name)
+            note = repo.read_note(stem + ".md")
         except Exception:
             continue
+        metadata = note.metadata
         for raw in list(metadata.tags or []):
             norm = raw.strip().lower()
             if not norm:
@@ -239,11 +220,7 @@ def get_note(title: str, *, token=None, _store=None) -> dict:
     if not name:
         return {"found": False, "message": f"Note '{title}' not found."}
     try:
-        stem_map = {
-            p.stem.lower(): p.stem
-            for p in repo.notes_dir.iterdir()
-            if p.is_file() and p.suffix == ".md"
-        }
+        stem_map = {stem.lower(): stem for stem in repo.list_stems()}
     except OSError:
         stem_map = {}
     real_stem = stem_map.get(name.lower())
