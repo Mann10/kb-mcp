@@ -31,6 +31,7 @@ logger = logging.getLogger("kb_mcp.server")
 mcp = FastMCP("KnowledgeBase")
 
 from kb_mcp import portal_routes  # noqa: F401  (BFF custom_route registration, D-10)
+from kb_mcp import portal_token_routes  # noqa: F401  (BFF user token routes, Phase 11-01)
 
 
 def resolve_notes_dir(raw: str | None = None) -> Path:
