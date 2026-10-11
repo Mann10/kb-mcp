@@ -16,7 +16,7 @@
 - [x] **Phase 7: Note CRUD Operations** - Create, update, delete notes (2026-10-10)
 - [x] **Phase 8: Tag Management & Templates** - Tag operations, note templates (2026-10-10)
 - [x] **Phase 9: Integration & Hardening** - Rate limiting, error handling, audit logging, E2E (2026-10-10)
-- [ ] **Phase 10: Portal Auth & Shell** - Login, session, admin role + API seam (v3.0)
+- [x] **Phase 10: Portal Auth & Shell** - Login, session, admin role + API seam (v3.0) (completed 2026-10-11)
 - [ ] **Phase 11: Token Self-Serve & Admin** - Read self-serve, request/approve, mint, lifecycle (v3.0)
 - [ ] **Phase 12: KB Browse & Edit** - Search/read/list/tags + note CRUD from UI (v3.0)
 - [ ] **Phase 13: Setup, Activity & Settings** - Client guide, audit/revisions/usage, KB settings (v3.0)
@@ -216,11 +216,11 @@ Wave structure:
   2. Non-admin users hitting an admin-gated action get a clear denial (no data leak)
   3. The UI never holds service_role keys — all privileged reads/writes go through a server-side API seam
   4. Auth provider choice (Supabase Auth leading) is locked with rationale before Phase 11
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 10-01-PLAN.md — Backend BFF auth seam: Supabase JWT validation, admin gates, /api/health+/api/me+/api/admin/ping + CORS
-- [ ] 10-02-PLAN.md — Vite+React auth shell on Vercel: login, session header, admin denial + live human checkpoint
+- [x] 10-02-PLAN.md — Vite+React auth shell on Vercel: login, session header, admin denial + live human checkpoint
 
 Wave structure:
 - Wave 1: 10-01 (no dependencies)
@@ -273,7 +273,7 @@ Wave structure:
 | 7. Note CRUD Operations | 2/2 | Complete | 2026-10-10 |
 | 8. Tag Management & Templates | 2/2 | Complete    | 2026-10-10 |
 | 9. Integration & Hardening | 4/5 | In Progress | - |
-| 10. Portal Auth & Shell | 1/2 | In Progress|  |
+| 10. Portal Auth & Shell | 2/2 | Complete   | 2026-10-11 |
 | 11. Token Self-Serve & Admin | 0/0 | Not started | - |
 | 12. KB Browse & Edit | 0/0 | Not started | - |
 | 13. Setup, Activity & Settings | 0/0 | Not started | - |

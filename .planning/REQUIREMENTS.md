@@ -9,8 +9,8 @@ Token portal + control panel (separate frontend). Every requirement maps to the 
 
 ### Portal Auth
 
-- [ ] **PORT-01**: User can sign up / log in with email via the UI
-- [ ] **PORT-02**: User session persists across browser refresh in the UI
+- [x] **PORT-01**: User can sign up / log in with email via the UI
+- [x] **PORT-02**: User session persists across browser refresh in the UI
 - [x] **PORT-03**: Admin role gates all approve/mint/revoke and settings actions in the UI
 
 ### Token Self-Serve & Admin
@@ -79,8 +79,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PORT-01 | Phase 10 | Pending |
-| PORT-02 | Phase 10 | Pending |
+| PORT-01 | Phase 10 | Complete |
+| PORT-02 | Phase 10 | Complete |
 | PORT-03 | Phase 10 | Complete |
 | TOK-01 | Phase 11 | Pending |
 | TOK-02 | Phase 11 | Pending |
