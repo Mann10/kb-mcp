@@ -182,6 +182,24 @@ def get_pending() -> list[dict]:
         return [_row_to_dict(row) for row in cur.fetchall()]
 
 
+def get_decided(limit: int = 50) -> list[dict]:
+    """Decided (approved/denied) requests, newest decision first (D-09 history).
+
+    Additive helper for the Plan 02 admin queue — existing functions untouched.
+    """
+    from kb_mcp.db import connect
+
+    with connect() as conn, conn.cursor() as cur:
+        cur.execute(
+            f"SELECT {_COLUMNS} FROM token_requests "  # noqa: S608 - fixed columns
+            "WHERE status IN ('approved', 'denied') "
+            "ORDER BY decided_at DESC NULLS LAST, id DESC "
+            "LIMIT %s",
+            (limit,),
+        )
+        return [_row_to_dict(row) for row in cur.fetchall()]
+
+
 __all__ = [
     "STATUS_APPROVED",
     "STATUS_DENIED",
@@ -189,6 +207,7 @@ __all__ = [
     "RequestConflict",
     "cancel_request",
     "create_request",
+    "get_decided",
     "get_pending",
     "get_user_requests",
     "set_decision",
