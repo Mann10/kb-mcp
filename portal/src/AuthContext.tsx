@@ -6,6 +6,7 @@ interface AuthContextValue {
   session: Session | null
   user: User | null
   isLoggedIn: boolean
+  isInitialized: boolean
   signUp: (email: string, password: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
@@ -16,11 +17,12 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
+  const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
-    })
+    }).finally(() => setIsInitialized(true))
     const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next)
     })
@@ -64,12 +66,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       user: session?.user ?? null,
       isLoggedIn: session !== null,
+      isInitialized,
       signUp,
       signIn,
       signOut,
       authFetch,
     }),
-    [session, signUp, signIn, signOut, authFetch],
+    [session, isInitialized, signUp, signIn, signOut, authFetch],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
