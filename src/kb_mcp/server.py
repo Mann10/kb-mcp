@@ -30,6 +30,8 @@ logger = logging.getLogger("kb_mcp.server")
 
 mcp = FastMCP("KnowledgeBase")
 
+from kb_mcp import portal_routes  # noqa: F401  (BFF custom_route registration, D-10)
+
 
 def resolve_notes_dir(raw: str | None = None) -> Path:
     """Resolve the notes directory: explicit arg > NOTES_DIR env > default."""
@@ -387,7 +389,7 @@ def delete_template(name: str) -> dict:
     )
 
 
-def serve(host: str = "0.0.0.0", port: int = 8000, notes_dir: str | None = None) -> None:
+def serve(host: str = "0.0.0.0", port: int = 8000, notes_dir: str | None = None, portal_origins: str | None = None) -> None:
     """Start the MCP server on streamable-http after fail-fast checks (D-01/D-06)."""
     from kb_mcp.backend import get_note_repository
     from kb_mcp.read_tools import configure_default_repo as configure_read_repo
@@ -405,7 +407,41 @@ def serve(host: str = "0.0.0.0", port: int = 8000, notes_dir: str | None = None)
     configure_read_repo(repo)
     configure_write_repo(repo)
     logger.info("transport=streamable-http host=%s port=%s notes_dir=%s", host, port, resolved)
-    mcp.run(transport="streamable-http", host=host, port=port)
+    # Portal CORS (D-14): Starlette CORSMiddleware when the installed fastmcp
+    # run() accepts a middleware kwarg; otherwise skip silently (Horizon path
+    # relies on the manual Origin echo in portal_routes).
+    try:
+        import inspect as _inspect
+
+        _sig = _inspect.signature(mcp.run)
+        _params = _sig.parameters
+        _accepts_mw = "middleware" in _params or any(
+            p.kind == _inspect.Parameter.VAR_KEYWORD for p in _params.values()
+        )
+    except Exception:
+        _accepts_mw = False
+    if _accepts_mw:
+        try:
+            from starlette.middleware import Middleware as _Middleware
+            from starlette.middleware.cors import CORSMiddleware as _CORSMiddleware
+
+            _raw = portal_origins if portal_origins is not None else os.environ.get("PORTAL_ORIGINS", "")
+            _parsed = [o.strip() for o in _raw.split(",") if o.strip()]
+            _middleware = [
+                _Middleware(
+                    _CORSMiddleware,
+                    allow_origins=_parsed,
+                    allow_methods=["GET", "OPTIONS"],
+                    allow_headers=["Authorization", "Content-Type"],
+                    max_age=600,
+                )
+            ]
+            mcp.run(transport="streamable-http", host=host, port=port, middleware=_middleware)
+        except Exception as e:
+            logger.warning("portal middleware skipped (%s); using manual CORS echo", type(e).__name__)
+            mcp.run(transport="streamable-http", host=host, port=port)
+    else:
+        mcp.run(transport="streamable-http", host=host, port=port)
 
 
 if __name__ == "__main__":
