@@ -58,6 +58,9 @@ class NoteRepository:
                 notes_dir = Path.home() / "knowledge-base" / "notes"
         self.notes_dir = notes_dir.resolve()
         self.notes_dir.mkdir(parents=True, exist_ok=True)
+        from .history import DulwichHistory
+
+        self._history = DulwichHistory(self.notes_dir)
 
     def read_note(self, filename: str) -> Note:
         path = validate_path(self.notes_dir, filename)
@@ -91,9 +94,15 @@ class NoteRepository:
         except Exception as e:
             raise FileIOError(filename, "write", str(e))
 
-        from .git_history import commit_note_file
+        from .history import NoteSnapshot
 
-        commit_note_file(str(self.notes_dir), filename, "update" if existed else "create")
+        self._history.record(
+            "update" if existed else "create",
+            NoteSnapshot(
+                stem=path.stem, title=title, body=body, tags=tags, created=created
+            ),
+            actor="unknown",
+        )
 
         metadata = NoteMetadata(title=title, tags=tags, created=created)
         return Note(filename=path.stem, metadata=metadata, body=body)
@@ -126,9 +135,13 @@ class NoteRepository:
         except Exception as e:
             raise FileIOError(filename, "delete", str(e))
 
-        from .git_history import commit_note_deletion
+        from .history import NoteSnapshot
 
-        commit_note_deletion(str(self.notes_dir), filename)
+        self._history.record(
+            "delete",
+            NoteSnapshot(stem=path.stem, title="", body="", tags=[], created="2000-01-01"),
+            actor="unknown",
+        )
 
     def update_note(
         self,
@@ -181,8 +194,19 @@ class NoteRepository:
 
             raise FileIOError(filename, "delete", str(e))
 
-        from .git_history import commit_note_rename
+        from .history import NoteSnapshot
 
-        commit_note_rename(str(self.notes_dir), filename, new_stem + ".md")
+        self._history.record(
+            "rename",
+            NoteSnapshot(
+                stem=new_stem,
+                title=validated.title,
+                body=new_body,
+                tags=validated.tags,
+                created=validated.created,
+            ),
+            actor="unknown",
+            old_stem=old_stem,
+        )
 
         return Note(filename=new_stem, metadata=validated, body=new_body)
