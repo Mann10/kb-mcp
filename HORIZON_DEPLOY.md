@@ -42,6 +42,49 @@ so every client sends **two** credentials:
   — or temporarily point a local checkout at the pooler URL and run
   `kb-mcp generate <name> --type read-write` with `KB_BACKEND=supabase` set.
 
+## Share with a teammate (one-shot client setup)
+
+Prerequisites on their machine: Node.js 18+ and Claude Desktop. Then:
+
+1. Install the bridge globally (avoids the `npx` + spaces-in-path trap on Windows):
+   ```
+   npm install -g mcp-remote
+   ```
+2. Paste this into their Claude Desktop config
+   (`%APPDATA%\Claude\claude_desktop_config.json` on Windows,
+   `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS),
+   filling in the two secrets you issue them:
+   ```json
+   {
+     "mcpServers": {
+       "knowledge-base": {
+         "command": "mcp-remote",
+         "args": [
+           "https://<your-server>.fastmcp.app/mcp",
+           "--header",
+           "Authorization:Bearer ${HORIZON_KEY}",
+           "--header",
+           "x-api-token:${KB_TOKEN}"
+         ],
+         "env": {
+           "HORIZON_KEY": "<their-horizon-api-key>",
+           "KB_TOKEN": "<their-kb-token>"
+         }
+       }
+     }
+   }
+   ```
+   Notes: no spaces after the colons in the header args (Windows arg-mangling
+   workaround); secrets live in `env`, where spaces are safe. `mcp-remote`
+   substitutes `${...}` from `env` itself.
+3. Fully quit Claude Desktop from the tray and reopen.
+4. First launch may open a browser for Horizon's one-time OAuth; afterwards the
+   credential is cached and launches are silent.
+
+What you (the owner) must issue per person: a Horizon API key (dashboard →
+avatar → API Keys) with server access, plus a KB token
+(`kb-mcp generate <name>` with `KB_BACKEND=supabase`, read or read-write).
+
 ## Day-2 notes
 
 - Every push to `master` builds a new artifact; promote/roll back from Deployments.
