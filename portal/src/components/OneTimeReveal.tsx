@@ -5,7 +5,6 @@ interface OneTimeRevealProps {
   label: string
   onDismiss: () => void
 }
-
 /**
  * One-time secret reveal (D-06, T-11-11).
  *
@@ -17,8 +16,14 @@ export default function OneTimeReveal({ token, label, onDismiss }: OneTimeReveal
   const [copied, setCopied] = useState(false)
   const dismissRef = useRef(onDismiss)
   dismissRef.current = onDismiss
+  const boxRef = useRef<HTMLElement | null>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
+    // Unmissable: scroll into view and pre-select the secret so Ctrl+C works instantly.
+    boxRef.current?.scrollIntoView({ block: 'center' })
+    inputRef.current?.focus()
+    inputRef.current?.select()
     return () => {
       dismissRef.current()
     }
@@ -34,12 +39,12 @@ export default function OneTimeReveal({ token, label, onDismiss }: OneTimeReveal
   }
 
   return (
-    <section aria-live="polite" style={{ border: '1px solid #b45309', padding: '1rem', margin: '1rem 0' }}>
+    <section ref={boxRef} aria-live="polite" style={{ border: '2px solid #b45309', padding: '1rem', margin: '1rem 0', background: '#fffbeb' }}>
       <p>
         <strong>{label}</strong>
       </p>
       <p>Copy now — this secret is shown once and never again.</p>
-      <input type="text" readOnly value={token} aria-label={label} style={{ width: '100%' }} />
+      <input ref={inputRef} type="text" readOnly value={token} aria-label={label} style={{ width: '100%' }} />
       <p>
         <button type="button" onClick={copy}>
           {copied ? 'Copied' : 'Copy'}
