@@ -14,19 +14,18 @@ interface OneTimeRevealProps {
  */
 export default function OneTimeReveal({ token, label, onDismiss }: OneTimeRevealProps) {
   const [copied, setCopied] = useState(false)
-  const dismissRef = useRef(onDismiss)
-  dismissRef.current = onDismiss
   const boxRef = useRef<HTMLElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     // Unmissable: scroll into view and pre-select the secret so Ctrl+C works instantly.
+    // NOTE: no cleanup calling onDismiss here — under React.StrictMode (dev)
+    // the mount cleanup runs immediately and would dismiss the box itself.
+    // Clearance is guaranteed anyway: Dismiss button + route unmount drops
+    // the parent's reveal state.
     boxRef.current?.scrollIntoView({ block: 'center' })
     inputRef.current?.focus()
     inputRef.current?.select()
-    return () => {
-      dismissRef.current()
-    }
   }, [])
 
   const copy = async () => {
