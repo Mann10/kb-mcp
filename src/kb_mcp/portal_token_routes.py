@@ -12,7 +12,7 @@ object via ``@mcp.custom_route`` (same Horizon process as portal_routes):
 - ``POST /api/tokens/rotate`` — rotate own token, one-time reveal (D-14)
 
 Conventions (do not reshape): fail-closed ``portal_auth.require_user`` gate
-on every route; CORS via ``portal_routes._cors_headers`` / ``handle_options``;
+on every route; CORS via ``portal_cors._cors_headers`` / ``handle_options``;
 structured ``{success:false, message}`` denials; raw secrets appear in exactly
 one response field (``token`` on mint/rotate 200) and never in lists or logs.
 Token ``username`` is stamped with the portal login email verbatim (D-07).
@@ -30,7 +30,7 @@ from kb_mcp import portal_auth
 from kb_mcp import token_requests
 from kb_mcp.auth import TokenType, token_status
 from kb_mcp.backend import get_token_store
-from kb_mcp.portal_routes import _cors_headers, handle_options
+from kb_mcp.portal_cors import _cors_headers, handle_options
 from kb_mcp.server import mcp
 
 logger = logging.getLogger(__name__)

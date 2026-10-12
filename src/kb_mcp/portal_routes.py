@@ -8,8 +8,6 @@ Import-safe: zero I/O and zero required env at import. All env reads
 via :mod:`kb_mcp.portal_auth` or local helpers.
 """
 
-import os
-
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
@@ -20,51 +18,8 @@ from kb_mcp.portal_auth import (
     require_admin,
     require_user,
 )
+from kb_mcp.portal_cors import _cors_headers, handle_options
 from kb_mcp.server import mcp
-
-
-def _allowed_origins() -> list[str]:
-    """Parse PORTAL_ORIGINS allowlist per-request (lowercased for compare)."""
-    raw = os.environ.get("PORTAL_ORIGINS", "")
-    if not raw.strip():
-        return []
-    return [o.strip().lower() for o in raw.split(",") if o.strip()]
-
-
-def _echo_origin(request: Request) -> str | None:
-    """Return the request Origin to echo, or None when not allowlisted."""
-    try:
-        origin = request.headers.get("origin")
-    except Exception:
-        return None
-    if not origin or not origin.strip():
-        return None
-    allowed = _allowed_origins()
-    if not allowed:
-        return None
-    if origin.strip().lower() in allowed:
-        return origin.strip()
-    return None
-
-
-def _cors_headers(request: Request) -> dict[str, str]:
-    """CORS headers for GET responses: echoed Allow-Origin when matched."""
-    echoed = _echo_origin(request)
-    if echoed:
-        return {"Access-Control-Allow-Origin": echoed}
-    return {}
-
-
-def handle_options(request: Request) -> Response:
-    """Shared OPTIONS/preflight helper: 204 + allowlist-echoed CORS headers."""
-    headers: dict[str, str] = {
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Authorization, Content-Type",
-    }
-    echoed = _echo_origin(request)
-    if echoed:
-        headers["Access-Control-Allow-Origin"] = echoed
-    return Response(status_code=204, headers=headers)
 
 
 @mcp.custom_route("/api/health", methods=["GET"])

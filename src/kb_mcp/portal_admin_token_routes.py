@@ -12,7 +12,7 @@ Admin-gated endpoints mounted on the shared ``kb_mcp.server.mcp`` object via
 Conventions (do not reshape): 401-vs-403 split (``require_user`` None → 401
 ``PORTAL_INVALID_MESSAGE``; user ok but not admin → 403
 ``PORTAL_FORBIDDEN_MESSAGE`` with zero rows leaked); CORS via
-``portal_routes._cors_headers`` / ``handle_options``; structured
+``portal_cors._cors_headers`` / ``handle_options``; structured
 ``{success:false, message}`` denials; raw secrets appear in exactly one
 response field (``token`` on approve 200); masked-email logging only.
 
@@ -32,8 +32,14 @@ from kb_mcp import portal_auth
 from kb_mcp import token_requests as requests_store
 from kb_mcp.auth import TokenType
 from kb_mcp.backend import get_token_store
-from kb_mcp.portal_routes import _cors_headers, handle_options
-from kb_mcp.portal_token_routes import _default_expiry, _mask_entry, _sort_active_first
+from kb_mcp.portal_cors import _cors_headers, handle_options
+
+# NOTE: no top-level import from kb_mcp.portal_token_routes. The shared
+# helpers (_mask_entry, _default_expiry, _sort_active_first) are imported
+# lazily inside handlers instead: a top-level import re-creates the
+# server → admin → token_routes cycle for cold `import portal_token_routes`
+# (server mounts admin while token_routes is still partially initialized).
+# By request time every module is fully loaded, so deferred import is safe.
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +132,8 @@ async def admin_request_approve(request: Request) -> Response:
             status_code=400,
             headers=_cors_headers(request),
         )
+    from kb_mcp.portal_token_routes import _default_expiry
+
     expires_at = body.get("expires_at") or _default_expiry()
     decided = requests_store.set_decision(
         pending_row["id"], requests_store.STATUS_APPROVED, admin.email
@@ -237,6 +245,8 @@ async def admin_mint(request: Request) -> Response:
             headers=_cors_headers(request),
         )
     token_type = _MINT_TYPES[token_type_raw]
+    from kb_mcp.portal_token_routes import _default_expiry
+
     expires_at = body.get("expires_at") if "expires_at" in body else _default_expiry()
     store = get_token_store()
     raw, entry = store.add_token(
@@ -282,6 +292,8 @@ async def admin_token_list(request: Request) -> Response:
         "yes",
     )
     store = get_token_store()
+    from kb_mcp.portal_token_routes import _mask_entry, _sort_active_first
+
     masked = [_mask_entry(e) for e in store.list_entries(include_revoked_expired=True)]
     if not include_revoked:
         masked = [m for m in masked if m["status"] == "active"]
