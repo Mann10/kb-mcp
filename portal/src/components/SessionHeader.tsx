@@ -53,6 +53,10 @@ export default function SessionHeader() {
   return (
     <header style={{ display: 'flex', gap: '1rem', padding: '0.75rem 1rem', borderBottom: '1px solid #ddd' }}>
       <span>KB Portal</span>
+      <nav style={{ display: 'flex', gap: '1rem' }}>
+        <Link to="/browse">Browse</Link>
+        <Link to="/tokens">My Tokens</Link>
+      </nav>
       <span style={{ marginLeft: 'auto' }}>
         {checking ? (
           'Checking session…'
