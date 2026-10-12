@@ -32,6 +32,7 @@ mcp = FastMCP("KnowledgeBase")
 
 from kb_mcp import portal_routes  # noqa: F401  (BFF custom_route registration, D-10)
 from kb_mcp import portal_token_routes  # noqa: F401  (BFF user token routes, Phase 11-01)
+from kb_mcp import portal_kb_read_routes  # noqa: F401  (BFF KB read routes, Phase 12-01)
 from kb_mcp import portal_admin_token_routes  # noqa: F401  (BFF admin token routes, Phase 11-02)
 
 
