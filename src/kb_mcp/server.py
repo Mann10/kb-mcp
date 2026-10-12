@@ -433,7 +433,7 @@ def serve(host: str = "0.0.0.0", port: int = 8000, notes_dir: str | None = None,
                 _Middleware(
                     _CORSMiddleware,
                     allow_origins=_parsed,
-                    allow_methods=["GET", "OPTIONS"],
+                    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
                     allow_headers=["Authorization", "Content-Type"],
                     max_age=600,
                 )
