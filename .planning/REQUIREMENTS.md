@@ -15,25 +15,25 @@ Token portal + control panel (separate frontend). Every requirement maps to the 
 
 ### Token Self-Serve & Admin
 
-- [ ] **TOK-01**: Logged-in user can self-serve a new read-only token from the UI
-- [ ] **TOK-02**: Logged-in user can view their own tokens (masked value, type, created, expiry, status)
-- [ ] **TOK-03**: Logged-in user can request a write-token upgrade from the UI
-- [ ] **TOK-04**: Admin can approve or deny write-token requests from a queue in the UI
-- [ ] **TOK-05**: Admin can directly mint a read or read-write token for any user from the UI
-- [ ] **TOK-06**: Admin can revoke, rotate, and list all tokens from the UI (parity with CLI lifecycle)
+- [x] **TOK-01**: Logged-in user can self-serve a new read-only token from the UI
+- [x] **TOK-02**: Logged-in user can view their own tokens (masked value, type, created, expiry, status)
+- [x] **TOK-03**: Logged-in user can request a write-token upgrade from the UI
+- [x] **TOK-04**: Admin can approve or deny write-token requests from a queue in the UI
+- [x] **TOK-05**: Admin can directly mint a read or read-write token for any user from the UI
+- [x] **TOK-06**: Admin can revoke, rotate, and list all tokens from the UI (parity with CLI lifecycle)
 
 ### KB Browsing
 
-- [ ] **BROW-01**: User can search notes by keyword from the UI with snippets
-- [ ] **BROW-02**: User can read full note content from the UI
-- [ ] **BROW-03**: User can list notes with metadata and browse tags from the UI
+- [x] **BROW-01**: User can search notes by keyword from the UI with snippets
+- [x] **BROW-02**: User can read full note content from the UI
+- [x] **BROW-03**: User can list notes with metadata and browse tags from the UI
 
 ### KB Editing
 
-- [ ] **EDIT-01**: Write-authorized user can create a note (incl. from meeting/book/idea template) from the UI
-- [ ] **EDIT-02**: Write-authorized user can update note content and metadata from the UI
-- [ ] **EDIT-03**: Write-authorized user can delete a note from the UI
-- [ ] **EDIT-04**: Write-authorized user can add/remove tags from the UI
+- [x] **EDIT-01**: Write-authorized user can create a note (incl. from meeting/book/idea template) from the UI
+- [x] **EDIT-02**: Write-authorized user can update note content and metadata from the UI
+- [x] **EDIT-03**: Write-authorized user can delete a note from the UI
+- [x] **EDIT-04**: Write-authorized user can add/remove tags from the UI
 
 ### Client Setup
 
@@ -82,19 +82,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-01 | Phase 10 | Complete |
 | PORT-02 | Phase 10 | Complete |
 | PORT-03 | Phase 10 | Complete |
-| TOK-01 | Phase 11 | Pending |
-| TOK-02 | Phase 11 | Pending |
-| TOK-03 | Phase 11 | Pending |
-| TOK-04 | Phase 11 | Pending |
-| TOK-05 | Phase 11 | Pending |
-| TOK-06 | Phase 11 | Pending |
-| BROW-01 | Phase 12 | Pending |
-| BROW-02 | Phase 12 | Pending |
-| BROW-03 | Phase 12 | Pending |
-| EDIT-01 | Phase 12 | Pending |
-| EDIT-02 | Phase 12 | Pending |
-| EDIT-03 | Phase 12 | Pending |
-| EDIT-04 | Phase 12 | Pending |
+| TOK-01 | Phase 11 | Complete |
+| TOK-02 | Phase 11 | Complete |
+| TOK-03 | Phase 11 | Complete |
+| TOK-04 | Phase 11 | Complete |
+| TOK-05 | Phase 11 | Complete |
+| TOK-06 | Phase 11 | Complete |
+| BROW-01 | Phase 12 | Complete |
+| BROW-02 | Phase 12 | Complete |
+| BROW-03 | Phase 12 | Complete |
+| EDIT-01 | Phase 12 | Complete |
+| EDIT-02 | Phase 12 | Complete |
+| EDIT-03 | Phase 12 | Complete |
+| EDIT-04 | Phase 12 | Complete |
 | SETUP-01 | Phase 13 | Pending |
 | SETUP-02 | Phase 13 | Pending |
 | ACT-01 | Phase 13 | Pending |

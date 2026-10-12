@@ -17,8 +17,8 @@
 - [x] **Phase 8: Tag Management & Templates** - Tag operations, note templates (2026-10-10)
 - [x] **Phase 9: Integration & Hardening** - Rate limiting, error handling, audit logging, E2E (2026-10-10)
 - [x] **Phase 10: Portal Auth & Shell** - Login, session, admin role + API seam (v3.0) (completed 2026-10-11)
-- [ ] **Phase 11: Token Self-Serve & Admin** - Read self-serve, request/approve, mint, lifecycle (v3.0)
-- [ ] **Phase 12: KB Browse & Edit** - Search/read/list/tags + note CRUD from UI (v3.0)
+- [x] **Phase 11: Token Self-Serve & Admin** - Read self-serve, request/approve, mint, lifecycle (v3.0) (completed 2026-10-12)
+- [x] **Phase 12: KB Browse & Edit** - Search/read/list/tags + note CRUD from UI (v3.0) (completed 2026-10-12)
 - [ ] **Phase 13: Setup, Activity & Settings** - Client guide, audit/revisions/usage, KB settings (v3.0)
 
 ## Phase Details
@@ -216,7 +216,7 @@ Wave structure:
   2. Non-admin users hitting an admin-gated action get a clear denial (no data leak)
   3. The UI never holds service_role keys — all privileged reads/writes go through a server-side API seam
   4. Auth provider choice (Supabase Auth leading) is locked with rationale before Phase 11
-**Plans:** 2/2 plans complete
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 10-01-PLAN.md — Backend BFF auth seam: Supabase JWT validation, admin gates, /api/health+/api/me+/api/admin/ping + CORS
@@ -236,7 +236,22 @@ Wave structure:
   3. An admin can approve/deny from a queue and can directly mint either token type
   4. Revoked/rotated tokens stop working (verify against Supabase semantics incl. TTL)
   5. Token values are never logged or stored raw outside the one-time reveal
-**Plans:** TBD during `/gsd-plan-phase 11`
+**Plans:** 3/3 plans complete
+
+Plans:
+- [x] 11-01-PLAN.md — User self-serve backend: token_requests migration + store, user BFF routes, contract tests, [BLOCKING] schema push
+- [x] 11-02-PLAN.md — Admin backend: approval queue, approve/deny (mints fresh write), direct mint, all-tokens, revoke/rotate
+- [x] 11-03-PLAN.md — Token UI: My Tokens + admin tokens pages, one-time reveal, nav, live human checkpoint
+
+Wave structure:
+- Wave 1: 11-01 (no dependencies)
+- Wave 2: 11-02 (depends on 11-01 request store)
+- Wave 3: 11-03 (depends on 11-01, 11-02 BFF contracts, human-verify checkpoint)
+
+Cross-cutting constraints:
+- Raw secrets appear only in one-time mint/approve/rotate responses, never in lists/queue/history (D-06, D-13)
+- Token username is always the portal login email verbatim (D-07)
+- Self-serve cap 5 + 90d default TTL enforced server-side; never-expire is admin-only (D-05, D-11)
 
 ### Phase 12: KB Browse & Edit (v3.0)
 **Goal**: Users browse/search/read the KB from the UI; write-authorized users run full note + tag CRUD without touching the CLI
@@ -247,7 +262,17 @@ Wave structure:
   2. A write-authorized user can create (incl. from template), update, and delete notes from the UI
   3. Tag add/remove from the UI is idempotent and matches CLI semantics
   4. Read-only token holders get clear denials on every edit action
-**Plans:** TBD during `/gsd-plan-phase 12`
+**Plans:** 3/3 plans complete
+
+Plans:
+- [x] 12-01-PLAN.md — KB read BFF: gate helper + six require_user routes (search/list/get/tags/templates/can_write) + contract tests
+- [x] 12-02-PLAN.md — KB write BFF: six D-13-gated routes (create/template/update/delete/tags) + gate/rename/idempotency proofs
+- [x] 12-03-PLAN.md — Browse/Reader/Editor UI + nav + live human checkpoint
+
+Wave structure:
+- Wave 1: 12-01 (no dependencies)
+- Wave 2: 12-02 (depends on 12-01, shared server.py)
+- Wave 3: 12-03 (depends on 12-01, 12-02 BFF contracts, human-verify checkpoint)
 
 ### Phase 13: Setup, Activity & Settings (v3.0)
 **Goal**: Users connect clients in minutes; admin watches activity and manages KB/app settings without code changes
@@ -273,9 +298,9 @@ Wave structure:
 | 7. Note CRUD Operations | 2/2 | Complete | 2026-10-10 |
 | 8. Tag Management & Templates | 2/2 | Complete    | 2026-10-10 |
 | 9. Integration & Hardening | 4/5 | In Progress | - |
-| 10. Portal Auth & Shell | 2/2 | Complete   | 2026-10-11 |
-| 11. Token Self-Serve & Admin | 0/0 | Not started | - |
-| 12. KB Browse & Edit | 0/0 | Not started | - |
+| 10. Portal Auth & Shell | 3/3 | Complete    | 2026-10-11 |
+| 11. Token Self-Serve & Admin | 3/3 | Complete    | 2026-10-12 |
+| 12. KB Browse & Edit | 3/3 | Complete   | 2026-10-12 |
 | 13. Setup, Activity & Settings | 0/0 | Not started | - |
 
 ## Coverage
