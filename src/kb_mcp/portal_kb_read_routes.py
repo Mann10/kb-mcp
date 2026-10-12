@@ -264,6 +264,7 @@ async def kb_get(request: Request) -> Response:
     name = raw.strip()
     if name.lower().endswith(".md"):
         name = name[:-3]
+    name = name.strip()
     if not name:
         return JSONResponse(
             {"success": False, "message": f"Note '{raw}' not found."},
