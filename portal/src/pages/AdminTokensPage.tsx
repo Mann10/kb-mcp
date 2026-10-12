@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import OneTimeReveal from '../components/OneTimeReveal'
+import { fmtDate } from '../format'
 
 // BFF contracts (Plan 02): authFetch("/api/admin/requests"), authFetch("/api/admin/mint"),
 // authFetch("/api/admin/tokens"), authFetch("/api/admin/revoke"), authFetch("/api/admin/rotate").
@@ -30,6 +32,11 @@ interface MaskedToken {
   expires_at: string | null
   status: string
 }
+
+const cell: CSSProperties = { textAlign: 'left', padding: '0.35rem 0.9rem 0.35rem 0', verticalAlign: 'top' }
+const mono: CSSProperties = { ...cell, fontFamily: 'ui-monospace, monospace', whiteSpace: 'nowrap' }
+const nowrap: CSSProperties = { ...cell, whiteSpace: 'nowrap' }
+const section: CSSProperties = { marginBottom: '1.5rem' }
 
 export default function AdminTokensPage() {
   const { isLoggedIn, session, authFetch } = useAuth()
@@ -215,27 +222,27 @@ export default function AdminTokensPage() {
         <OneTimeReveal token={reveal.token} label={reveal.label} onDismiss={() => setReveal(null)} />
       )}
 
-      <section>
+      <section style={section}>
         <h2>Approval queue</h2>
         {pending.length === 0 ? (
           <p>No pending requests.</p>
         ) : (
-          <table>
+          <table style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th>Requester</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th style={cell}>Requester</th>
+                <th style={cell}>Date</th>
+                <th style={cell}>Status</th>
+                <th style={cell}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {pending.map((r) => (
                 <tr key={r.id}>
-                  <td>{r.user_email}</td>
-                  <td>{r.created_at}</td>
-                  <td>{r.status}</td>
-                  <td>
+                  <td style={cell}>{r.user_email}</td>
+                  <td style={nowrap}>{fmtDate(r.created_at)}</td>
+                  <td style={cell}>{r.status}</td>
+                  <td style={nowrap}>
                     <button type="button" onClick={() => decide(r.id, 'approve')}>
                       Approve
                     </button>{' '}
@@ -251,22 +258,22 @@ export default function AdminTokensPage() {
         {history.length > 0 && (
           <>
             <h3>History</h3>
-            <table>
+            <table style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th>Requester</th>
-                  <th>Status</th>
-                  <th>Decided at</th>
-                  <th>Decided by</th>
+                  <th style={cell}>Requester</th>
+                  <th style={cell}>Status</th>
+                  <th style={cell}>Decided at</th>
+                  <th style={cell}>Decided by</th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((r) => (
                   <tr key={r.id}>
-                    <td>{r.user_email}</td>
-                    <td>{r.status}</td>
-                    <td>{r.decided_at ?? '—'}</td>
-                    <td>{r.decided_by ?? '—'}</td>
+                    <td style={cell}>{r.user_email}</td>
+                    <td style={cell}>{r.status}</td>
+                    <td style={nowrap}>{r.decided_at ? fmtDate(r.decided_at) : '—'}</td>
+                    <td style={cell}>{r.decided_by ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -275,7 +282,7 @@ export default function AdminTokensPage() {
         )}
       </section>
 
-      <section>
+      <section style={section}>
         <h2>Direct mint</h2>
         <label>
           Email <input type="email" value={mintEmail} onChange={(e) => setMintEmail(e.target.value)} />
@@ -296,7 +303,7 @@ export default function AdminTokensPage() {
         </button>
       </section>
 
-      <section>
+      <section style={section}>
         <h2>All tokens</h2>
         <label>
           <input
@@ -310,28 +317,28 @@ export default function AdminTokensPage() {
         {tokens.length === 0 ? (
           <p>No tokens yet.</p>
         ) : (
-          <table>
+          <table style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th>Owner</th>
-                <th>Token</th>
-                <th>Type</th>
-                <th>Created</th>
-                <th>Expires</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th style={cell}>Owner</th>
+                <th style={cell}>Token</th>
+                <th style={cell}>Type</th>
+                <th style={cell}>Created</th>
+                <th style={cell}>Expires</th>
+                <th style={cell}>Status</th>
+                <th style={cell}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {tokens.map((t) => (
                 <tr key={`${t.username}${t.prefix}${t.created_at}`}>
-                  <td>{t.username}</td>
-                  <td>{t.display}</td>
-                  <td>{t.token_type}</td>
-                  <td>{t.created_at}</td>
-                  <td>{t.expires_at ?? 'never'}</td>
-                  <td>{t.status}</td>
-                  <td>
+                  <td style={cell}>{t.username}</td>
+                  <td style={mono}>{t.display}</td>
+                  <td style={cell}>{t.token_type}</td>
+                  <td style={nowrap}>{fmtDate(t.created_at)}</td>
+                  <td style={nowrap}>{fmtDate(t.expires_at)}</td>
+                  <td style={cell}>{t.status}</td>
+                  <td style={nowrap}>
                     <button type="button" onClick={() => revoke(t.prefix)}>
                       Revoke
                     </button>{' '}

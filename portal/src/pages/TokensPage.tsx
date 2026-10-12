@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { useAuth } from '../AuthContext'
 import OneTimeReveal from '../components/OneTimeReveal'
+import { fmtDate } from '../format'
 
 interface MaskedToken {
   prefix: string
@@ -23,6 +25,10 @@ interface UpgradeRequest {
 function defaultExpiryDate(): string {
   return new Date(Date.now() + 90 * 86400 * 1000).toISOString().slice(0, 10)
 }
+
+const cell: CSSProperties = { textAlign: 'left', padding: '0.35rem 0.9rem 0.35rem 0', verticalAlign: 'top' }
+const mono: CSSProperties = { ...cell, fontFamily: 'ui-monospace, monospace', whiteSpace: 'nowrap' }
+const section: CSSProperties = { marginBottom: '1.5rem' }
 
 // BFF contracts (Plan 01): authFetch("/api/tokens/mine"), authFetch("/api/tokens/mint-read"),
 // authFetch("/api/tokens/request"), authFetch("/api/tokens/my-request"),
@@ -167,7 +173,7 @@ export default function TokensPage() {
         <OneTimeReveal token={reveal.token} label={reveal.label} onDismiss={() => setReveal(null)} />
       )}
 
-      <section>
+      <section style={section}>
         <h2>Mint read token</h2>
         <label>
           Expiry date{' '}
@@ -178,7 +184,7 @@ export default function TokensPage() {
         </button>
       </section>
 
-      <section>
+      <section style={section}>
         <h2>My tokens</h2>
         <label>
           <input
@@ -193,26 +199,26 @@ export default function TokensPage() {
         {tokens.length === 0 ? (
           <p>No tokens yet.</p>
         ) : (
-          <table>
+          <table style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th>Token</th>
-                <th>Type</th>
-                <th>Created</th>
-                <th>Expires</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th style={cell}>Token</th>
+                <th style={cell}>Type</th>
+                <th style={cell}>Created</th>
+                <th style={cell}>Expires</th>
+                <th style={cell}>Status</th>
+                <th style={cell}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {tokens.map((t) => (
                 <tr key={`${t.prefix}${t.suffix}${t.created_at}`}>
-                  <td>{t.display}</td>
-                  <td>{t.token_type}</td>
-                  <td>{t.created_at}</td>
-                  <td>{t.expires_at ?? 'never'}</td>
-                  <td>{t.status}</td>
-                  <td>
+                  <td style={mono}>{t.display}</td>
+                  <td style={cell}>{t.token_type}</td>
+                  <td style={{ ...cell, whiteSpace: 'nowrap' }}>{fmtDate(t.created_at)}</td>
+                  <td style={{ ...cell, whiteSpace: 'nowrap' }}>{fmtDate(t.expires_at)}</td>
+                  <td style={cell}>{t.status}</td>
+                  <td style={{ ...cell, whiteSpace: 'nowrap' }}>
                     <button type="button" onClick={() => revoke(t.prefix)}>
                       Revoke
                     </button>{' '}
@@ -227,13 +233,13 @@ export default function TokensPage() {
         )}
       </section>
 
-      <section>
+      <section style={section}>
         <h2>Write upgrade</h2>
         {pending.length > 0 ? (
           <ul>
             {pending.map((r) => (
               <li key={r.id}>
-                Request #{r.id} — pending since {r.created_at}{' '}
+                Request #{r.id} — pending since {fmtDate(r.created_at)}{' '}
                 <button type="button" onClick={() => cancelRequest(r.id)}>
                   Cancel
                 </button>
@@ -254,7 +260,7 @@ export default function TokensPage() {
               {decided.map((r) => (
                 <li key={r.id}>
                   Request #{r.id} — {r.status}
-                  {r.decided_at ? ` at ${r.decided_at}` : ''}
+                  {r.decided_at ? ` at ${fmtDate(r.decided_at)}` : ''}
                   {r.status === 'denied' && (
                     <>
                       {' '}
