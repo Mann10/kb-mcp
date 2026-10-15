@@ -18,6 +18,10 @@ logger = logging.getLogger(__name__)
 PORTAL_INVALID_MESSAGE = "Invalid or missing login. Please log in again."
 PORTAL_FORBIDDEN_MESSAGE = "Admin access required. Contact the owner for approval."
 
+# Process-lifetime cache of stateless Supabase clients, keyed on (url, key).
+# Populated only from _supabase_client(); empty at import time.
+_client_cache: dict[tuple[str, str], object] = {}
+
 
 class PortalUser(BaseModel):
     """Authenticated portal user derived from a verified Supabase JWT."""
@@ -109,21 +113,53 @@ def _claims_to_user(claims: object) -> PortalUser | None:
     return PortalUser(id=sub, email=email, is_admin=is_admin)
 
 
+def _reset_client_cache() -> None:
+    """Test seam: forget every cached Supabase client."""
+    _client_cache.clear()
+
+
+def _supabase_client(url: str, key: str):
+    """Cached ``create_client(url, key)``, keyed on the exact ``(url, key)`` pair.
+
+    Reusing the client keeps its JWKS cache warm between requests instead of
+    forcing a network fetch to Supabase Auth on every portal API call. Both
+    components of the key matter: keying on url alone would hand the
+    ``service_role`` client created by :func:`ensure_admin_bootstrap` to an
+    anon-key lookup, or keep a stale client alive after anon-key rotation.
+
+    The ``from supabase import create_client`` import stays INSIDE the
+    function and the cache is never populated at module scope, preserving
+    import-safety (zero I/O, zero required env at import). The cache holds
+    stateless clients only — never a signed-in user session.
+
+    No TTL, LRU, or eviction: keys rotate only on deploy and the whole cache
+    is cleared by :func:`_reset_client_cache` in tests.
+    """
+    cache_key = (url, key)
+    client = _client_cache.get(cache_key)
+    if client is not None:
+        return client
+    try:
+        from supabase import create_client  # type: ignore
+    except Exception as e:
+        raise RuntimeError(f"supabase client unavailable: {e}")
+    client = create_client(url, key)
+    _client_cache[cache_key] = client
+    return client
+
+
 def _supabase_get_claims(token: str) -> object:
     """Primary offline JWT verification via supabase.auth.get_claims(token).
 
-    Reads SUPABASE_URL + SUPABASE_ANON_KEY per call. Raises on ANY failure
-    so the caller can fall back / deny fail-closed.
+    Reads SUPABASE_URL + SUPABASE_ANON_KEY per call (env is never cached);
+    only the constructed client is. Raises on ANY failure so the caller can
+    fall back / deny fail-closed.
     """
     url = os.environ.get("SUPABASE_URL", "").strip()
     anon = os.environ.get("SUPABASE_ANON_KEY", "").strip()
     if not url or not anon:
         raise RuntimeError("Missing SUPABASE_URL / SUPABASE_ANON_KEY")
-    try:
-        from supabase import create_client  # type: ignore
-    except Exception as e:
-        raise RuntimeError(f"supabase client unavailable: {e}")
-    client = create_client(url, anon)
+    client = _supabase_client(url, anon)
     # supabase-py: client.auth.get_claims(jwt)
     get_claims = getattr(client.auth, "get_claims", None)
     if get_claims is None:
@@ -137,11 +173,7 @@ def _supabase_get_user(token: str) -> object:
     anon = os.environ.get("SUPABASE_ANON_KEY", "").strip()
     if not url or not anon:
         raise RuntimeError("Missing SUPABASE_URL / SUPABASE_ANON_KEY")
-    try:
-        from supabase import create_client  # type: ignore
-    except Exception as e:
-        raise RuntimeError(f"supabase client unavailable: {e}")
-    client = create_client(url, anon)
+    client = _supabase_client(url, anon)
     get_user = getattr(client.auth, "get_user", None)
     if get_user is None:
         raise RuntimeError("supabase client has no auth.get_user")
@@ -214,11 +246,10 @@ def ensure_admin_bootstrap(user: PortalUser) -> bool:
             )
             return False
         try:
-            from supabase import create_client  # type: ignore
+            client = _supabase_client(url, service_key)
         except Exception as e:
             logger.warning("admin bootstrap unavailable (no supabase client): %s", e)
             return False
-        client = create_client(url, service_key)
         admin_api = getattr(getattr(client, "auth", None), "admin", None)
         if admin_api is None or not hasattr(admin_api, "update_user_by_id"):
             logger.warning("admin bootstrap unavailable (no auth.admin API)")

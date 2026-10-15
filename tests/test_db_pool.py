@@ -202,13 +202,82 @@ def test_close_pool_is_idempotent_and_resets(fake_pool):
     assert db._pool_url is None
 
 
-def test_connect_after_close_pool_rebuilds_transparently(fake_pool):
+def test_close_pool_then_connect_rebuilds_transparently(fake_pool):
     with db.connect():
         pass
     db.close_pool()
     with db.connect():
         pass
     assert len(fake_pool) == 2
+
+
+def test_pool_reused_across_supabase_repository_operations(monkeypatch):
+    """A real repository read checks out the shared pool, never dials."""
+    import sys
+    import types
+
+    from kb_mcp.supabase_notes import SupabaseNoteRepository
+
+    queries: list[str] = []
+
+    class _Rows:
+        def __init__(self, conn):
+            self._conn = conn
+
+        def execute(self, query, params=None):
+            queries.append(query)
+            self._rows = (
+                [("alpha", "Alpha", "body", ["t"], "2026-01-01")]
+                if "stem = ANY" in query
+                else []
+            )
+
+        def fetchall(self):
+            return self._rows
+
+        def fetchone(self):
+            return self._rows[0] if self._rows else None
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc):
+            return False
+
+    class _RepoConn(_FakeConn):
+        def cursor(self):
+            return _Rows(self)
+
+    class _RepoPoolConnection(_FakePoolConnection):
+        def __enter__(self):
+            self._pool.checkouts += 1
+            self._conn = _RepoConn(self._pool)
+            return self._conn
+
+    created: list[_FakePool] = []
+
+    class ConnectionPool(_FakePool):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            created.append(self)
+
+        def connection(self):
+            return _RepoPoolConnection(self)
+
+    module = types.ModuleType("psycopg_pool")
+    module.ConnectionPool = ConnectionPool  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "psycopg_pool", module)
+
+    repo = SupabaseNoteRepository()
+    notes = repo.read_notes(["alpha", "absent"])
+    assert list(notes) == ["alpha"]
+    assert notes["alpha"].body == "body"
+
+    repo.read_notes(["alpha"])
+    # One pool, two checkouts: the repo never opens its own connection.
+    assert len(created) == 1
+    assert created[0].checkouts == 2
+    assert all("ANY(%s)" in q for q in queries)
 
 
 # --- regression: pool reused across repository-shaped work -------------

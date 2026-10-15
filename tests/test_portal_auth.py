@@ -193,3 +193,190 @@ def test_service_role_only_via_env():
     for line in src.splitlines():
         if "SUPABASE_SERVICE_ROLE_KEY" in line:
             assert "os.environ.get" in line
+
+
+# --- Supabase auth client cache (261015-lfe task 3) ---------------------
+
+
+class _FakeAdmin:
+    def __init__(self):
+        self.updates = []
+
+    def update_user_by_id(self, user_id, payload):
+        self.updates.append((user_id, payload))
+
+
+class _FakeAuth:
+    def __init__(self):
+        self.get_claims_calls = []
+        self.get_user_calls = []
+        self.admin = _FakeAdmin()
+
+    def get_claims(self, token):
+        self.get_claims_calls.append(token)
+        return {"sub": "u-1", "email": "e@x.io", "app_metadata": {}}
+
+    def get_user(self, token):
+        self.get_user_calls.append(token)
+        return {"id": "u-1", "email": "e@x.io", "app_metadata": {}}
+
+
+class _FakeClient:
+    def __init__(self, url, key):
+        self.url = url
+        self.key = key
+        self.auth = _FakeAuth()
+
+
+class _FakeSupabaseModule:
+    """Stand-in for the `supabase` package, counting create_client calls."""
+
+    def __init__(self):
+        self.calls: list[tuple[str, str]] = []
+        self.clients: list[_FakeClient] = []
+
+    def create_client(self, url, key):
+        self.calls.append((url, key))
+        client = _FakeClient(url, key)
+        self.clients.append(client)
+        return client
+
+
+@pytest.fixture()
+def fake_supabase(monkeypatch):
+    """Patch `supabase.create_client` and clear the module client cache."""
+    import sys
+
+    module = _FakeSupabaseModule()
+    sys_module = type(sys)("supabase")
+    sys_module.create_client = module.create_client  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "supabase", sys_module)
+    portal_auth._reset_client_cache()
+    yield module
+    portal_auth._reset_client_cache()
+
+
+def test_two_claims_validations_create_one_client(monkeypatch, fake_supabase):
+    monkeypatch.setenv("SUPABASE_URL", "https://proj.supabase.co")
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "anon-key")
+    portal_auth._supabase_get_claims("token-a")
+    portal_auth._supabase_get_claims("token-b")
+    assert len(fake_supabase.calls) == 1
+
+
+def test_claims_then_user_share_one_client(monkeypatch, fake_supabase):
+    monkeypatch.setenv("SUPABASE_URL", "https://proj.supabase.co")
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "anon-key")
+    portal_auth._supabase_get_claims("token-a")
+    portal_auth._supabase_get_user("token-b")
+    assert len(fake_supabase.calls) == 1
+
+
+def test_client_is_reused_for_the_same_url_key_pair(fake_supabase):
+    a = portal_auth._supabase_client("https://proj.supabase.co", "anon-key")
+    b = portal_auth._supabase_client("https://proj.supabase.co", "anon-key")
+    assert a is b
+    assert len(fake_supabase.calls) == 1
+
+
+def test_rotated_anon_key_yields_a_different_client(fake_supabase):
+    a = portal_auth._supabase_client("https://proj.supabase.co", "anon-old")
+    b = portal_auth._supabase_client("https://proj.supabase.co", "anon-new")
+    assert a is not b
+    assert len(fake_supabase.calls) == 2
+
+
+def test_second_project_url_yields_a_different_client(fake_supabase):
+    a = portal_auth._supabase_client("https://one.supabase.co", "anon-key")
+    b = portal_auth._supabase_client("https://two.supabase.co", "anon-key")
+    assert a is not b
+    assert len(fake_supabase.calls) == 2
+
+
+def test_service_role_key_never_returned_for_anon_lookup(monkeypatch, fake_supabase):
+    monkeypatch.setenv("SUPABASE_URL", "https://proj.supabase.co")
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "anon-key")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "service-key")
+    monkeypatch.setenv("ADMIN_EMAILS", "owner@example.com")
+    anon = portal_auth._supabase_client(
+        "https://proj.supabase.co", "anon-key"
+    )
+    privileged = portal_auth._supabase_client(
+        "https://proj.supabase.co", "service-key"
+    )
+    assert anon is not privileged
+    assert anon.key == "anon-key"
+    assert privileged.key == "service-key"
+    # A second anon lookup must not be handed the privileged client.
+    assert portal_auth._supabase_client("https://proj.supabase.co", "anon-key") is anon
+
+
+def test_missing_env_raises_before_any_client_work(monkeypatch, fake_supabase):
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "anon-key")
+    with pytest.raises(RuntimeError, match="Missing SUPABASE_URL / SUPABASE_ANON_KEY"):
+        portal_auth._supabase_get_claims("t")
+    monkeypatch.setenv("SUPABASE_URL", "https://proj.supabase.co")
+    monkeypatch.delenv("SUPABASE_ANON_KEY", raising=False)
+    with pytest.raises(RuntimeError, match="Missing SUPABASE_URL / SUPABASE_ANON_KEY"):
+        portal_auth._supabase_get_user("t")
+    assert fake_supabase.calls == []
+
+
+def test_blank_env_raises_before_any_client_work(monkeypatch, fake_supabase):
+    monkeypatch.setenv("SUPABASE_URL", "   ")
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "   ")
+    with pytest.raises(RuntimeError, match="Missing SUPABASE_URL / SUPABASE_ANON_KEY"):
+        portal_auth._supabase_get_claims("t")
+    assert fake_supabase.calls == []
+
+
+def test_admin_bootstrap_reuses_cached_service_role_client(monkeypatch, fake_supabase):
+    monkeypatch.setenv("SUPABASE_URL", "https://proj.supabase.co")
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "anon-key")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "service-key")
+    monkeypatch.setenv("ADMIN_EMAILS", "owner@example.com")
+    user = PortalUser(id="u-1", email="owner@example.com", is_admin=False)
+    assert ensure_admin_bootstrap(user) is True
+    assert ensure_admin_bootstrap(user) is True
+    # Two bootstraps, one client — and it is the service_role bucket, never
+    # the anon one.
+    assert fake_supabase.calls == [("https://proj.supabase.co", "service-key")]
+    assert fake_supabase.clients[0].auth.admin.updates[0][0] == "u-1"
+
+
+def test_reset_client_cache_forces_a_rebuild(fake_supabase):
+    first = portal_auth._supabase_client("https://proj.supabase.co", "anon-key")
+    portal_auth._reset_client_cache()
+    second = portal_auth._supabase_client("https://proj.supabase.co", "anon-key")
+    assert first is not second
+    assert len(fake_supabase.calls) == 2
+
+
+def test_cached_client_is_used_only_for_stateless_verification():
+    """No sign_in / set_session / refresh may be introduced on the cache."""
+    import pathlib
+
+    src = pathlib.Path("src/kb_mcp/portal_auth.py").read_text(encoding="utf-8")
+    for forbidden in ("sign_in", "set_session", "refresh_session", "sign_in_with"):
+        assert forbidden not in src
+
+
+def test_module_import_reads_no_env_at_import_time():
+    """portal_auth must stay import-safe: zero env reads at module scope."""
+    import ast
+    import pathlib
+
+    tree = ast.parse(pathlib.Path("src/kb_mcp/portal_auth.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        assert not isinstance(node, (ast.Import, ast.ImportFrom)) or True
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Call):
+                func = sub.func
+                assert not (
+                    isinstance(func, ast.Attribute) and func.attr == "get"
+                    and isinstance(func.value, ast.Attribute)
+                    and func.value.attr == "environ"
+                ), "module-level env read found — import-safety broken"
