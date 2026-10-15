@@ -13,6 +13,12 @@ import os
 from starlette.requests import Request
 from starlette.responses import Response
 
+#: Every HTTP verb any portal route is registered with. Shared by the
+#: CORSMiddleware allowlist in ``server.serve`` and by ``handle_options`` so
+#: the two CORS layers cannot drift apart. A verb missing from either one fails
+#: the browser preflight with a 400, and the real request is never sent.
+ALLOWED_METHODS = "GET, POST, PUT, DELETE, OPTIONS"
+
 
 def _allowed_origins() -> list[str]:
     """Parse PORTAL_ORIGINS allowlist per-request (lowercased for compare)."""
@@ -47,9 +53,15 @@ def _cors_headers(request: Request) -> dict[str, str]:
 
 
 def handle_options(request: Request) -> Response:
-    """Shared OPTIONS/preflight helper: 204 + allowlist-echoed CORS headers."""
+    """Shared OPTIONS/preflight helper: 204 + allowlist-echoed CORS headers.
+
+    Allow-Methods must cover every verb any route is registered with
+    (GET/POST/PUT/DELETE). A missing verb here fails the browser preflight on
+    the no-middleware fallback path, which is exactly the path Horizon takes.
+    Shares :data:`ALLOWED_METHODS` with the CORSMiddleware path in ``serve``.
+    """
     headers: dict[str, str] = {
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Methods": ALLOWED_METHODS,
         "Access-Control-Allow-Headers": "Authorization, Content-Type",
     }
     echoed = _echo_origin(request)

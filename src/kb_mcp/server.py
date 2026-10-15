@@ -24,6 +24,7 @@ from kb_mcp.supabase_audit import audit_write_db
 from kb_mcp.supabase_auth import SupabaseTokenStore
 from kb_mcp.errors import AuthenticationError, AuthorizationError
 from kb_mcp.middleware import INVALID_TOKEN_MESSAGE, verify_token
+from kb_mcp.portal_cors import ALLOWED_METHODS
 from kb_mcp.rate_limit import RATE_LIMIT_MESSAGE, check_rate_limit, owner_key
 
 logger = logging.getLogger("kb_mcp.server")
@@ -393,8 +394,36 @@ def delete_template(name: str) -> dict:
     )
 
 
+def _load_dotenv_best_effort() -> bool:
+    """Optionally fill gaps in os.environ from a local ``.env``.
+
+    Opt-in via ``KB_MCP_LOAD_DOTENV=1``. Deliberately NOT automatic: ``serve()``
+    is also called from test fixtures and from subprocess launches with a
+    deliberately isolated environment, and an unconditional load would quietly
+    inject real SUPABASE_DB_URL / KB_BACKEND values into them.
+
+    ``override=False`` means a real exported variable always wins; this can only
+    fill in what is genuinely missing. Returns whether the load ran.
+    """
+    flag = os.environ.get("KB_MCP_LOAD_DOTENV", "").strip().lower()
+    if flag not in ("1", "true", "yes", "on"):
+        return False
+    try:
+        from dotenv import load_dotenv
+    except Exception:
+        logger.warning("KB_MCP_LOAD_DOTENV set but python-dotenv is not installed")
+        return False
+    try:
+        load_dotenv(override=False)
+    except Exception as e:  # pragma: no cover - defensive
+        logger.warning("dotenv load skipped (%s)", type(e).__name__)
+        return False
+    return True
+
+
 def serve(host: str = "0.0.0.0", port: int = 8000, notes_dir: str | None = None, portal_origins: str | None = None) -> None:
     """Start the MCP server on streamable-http after fail-fast checks (D-01/D-06)."""
+    _load_dotenv_best_effort()
     from kb_mcp.backend import get_note_repository
     from kb_mcp.read_tools import configure_default_repo as configure_read_repo
     from kb_mcp.write_tools import configure_default_repo as configure_write_repo
@@ -431,11 +460,25 @@ def serve(host: str = "0.0.0.0", port: int = 8000, notes_dir: str | None = None,
 
             _raw = portal_origins if portal_origins is not None else os.environ.get("PORTAL_ORIGINS", "")
             _parsed = [o.strip() for o in _raw.split(",") if o.strip()]
+            if not _parsed:
+                # Silent failure mode: an empty allowlist makes every browser
+                # preflight return a bare 400, so the portal looks broken with
+                # no clue why. Make it loud instead.
+                logger.warning(
+                    "PORTAL_ORIGINS is empty -- CORS allowlist is empty and every "
+                    "browser preflight will be rejected with 400. Set PORTAL_ORIGINS "
+                    "to your portal origin(s), e.g. http://localhost:5173 "
+                    "(or export KB_MCP_LOAD_DOTENV=1 to read it from .env)"
+                )
             _middleware = [
                 _Middleware(
                     _CORSMiddleware,
                     allow_origins=_parsed,
-                    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+                    # Shared with portal_cors.handle_options so the two CORS
+                    # layers cannot drift. Omitting PUT made CORSMiddleware 400
+                    # every /api/notes/update preflight, so the browser never
+                    # sent the PUT and the D-13 403 was unreachable.
+                    allow_methods=ALLOWED_METHODS.split(", "),
                     allow_headers=["Authorization", "Content-Type"],
                     max_age=600,
                 )
