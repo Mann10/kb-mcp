@@ -1,0 +1,165 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/instrument-sans";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+   KB Portal — "engineering field notebook"
+   Cool drafting paper, petrol ink, hairlines instead of cards.
+   The only saturated colour in the product is --signal, reserved for
+   one-time secret reveals (D-06).
+--------------------------------------------------------------------------- */
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Instrument Sans Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+
+    /* One-time secret reveal (D-06). Never used for anything else. */
+    --color-signal: var(--signal);
+    --color-signal-foreground: var(--signal-foreground);
+    --color-signal-surface: var(--signal-surface);
+    --color-signal-border: var(--signal-border);
+
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+    --background: #f4f5f7;
+    --foreground: #14171c;
+    --card: #ffffff;
+    --card-foreground: #14171c;
+    --popover: #ffffff;
+    --popover-foreground: #14171c;
+    --primary: #1d4e5c;
+    --primary-foreground: #f2f7f8;
+    --secondary: #e7eaef;
+    --secondary-foreground: #14171c;
+    --muted: #e7eaef;
+    --muted-foreground: #5a6270;
+    --accent: #dce7ea;
+    --accent-foreground: #14343e;
+    --destructive: #a4262c;
+    --border: #d8dce2;
+    --input: #cbd1da;
+    --ring: #1d4e5c;
+    --chart-1: #1d4e5c;
+    --chart-2: #5a6270;
+    --chart-3: #8c96a5;
+    --chart-4: #b45309;
+    --chart-5: #a4262c;
+
+    --signal: #b45309;
+    --signal-foreground: #5a3208;
+    --signal-surface: #fffbeb;
+    --signal-border: #e0a768;
+
+    --radius: 0.375rem;
+
+    --sidebar: #eceef2;
+    --sidebar-foreground: #14171c;
+    --sidebar-primary: #1d4e5c;
+    --sidebar-primary-foreground: #f2f7f8;
+    --sidebar-accent: #dce7ea;
+    --sidebar-accent-foreground: #14343e;
+    --sidebar-border: #d8dce2;
+    --sidebar-ring: #1d4e5c;
+}
+
+.dark {
+    --background: #101317;
+    --foreground: #e8eaee;
+    --card: #171b21;
+    --card-foreground: #e8eaee;
+    --popover: #171b21;
+    --popover-foreground: #e8eaee;
+    --primary: #7fb3c2;
+    --primary-foreground: #0b1418;
+    --secondary: #232830;
+    --secondary-foreground: #e8eaee;
+    --muted: #232830;
+    --muted-foreground: #98a1b0;
+    --accent: #24333a;
+    --accent-foreground: #cfe6ec;
+    --destructive: #e56067;
+    --border: #2a3038;
+    --input: #333a44;
+    --ring: #7fb3c2;
+    --signal: #d98526;
+    --signal-foreground: #2a1a06;
+    --signal-surface: #2a2010;
+    --signal-border: #7a5218;
+    --sidebar: #14181d;
+    --sidebar-foreground: #e8eaee;
+    --sidebar-primary: #7fb3c2;
+    --sidebar-primary-foreground: #0b1418;
+    --sidebar-accent: #24333a;
+    --sidebar-accent-foreground: #cfe6ec;
+    --sidebar-border: #2a3038;
+    --sidebar-ring: #7fb3c2;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'ss01', 'cv01';
+    }
+  html {
+    @apply font-sans;
+    }
+  /* Note bodies are long-form prose; give them a real measure and leading. */
+  .note-body {
+    @apply font-sans text-[0.9375rem] leading-[1.7] text-foreground/90;
+    max-width: 68ch;
+    }
+  /* Tabular data: token prefixes, counts, timestamps. */
+  .tabular {
+    @apply font-mono text-[0.8125rem] tabular-nums;
+    }
+}

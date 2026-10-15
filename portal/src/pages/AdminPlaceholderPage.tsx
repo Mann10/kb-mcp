@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ErrorNotice, InfoNotice, PageHeader } from '@/components/feedback'
 
 type AdminState =
   | { status: 'loading' }
@@ -43,25 +45,28 @@ export default function AdminPlaceholderPage() {
   }
 
   if (state.status === 'loading') {
-    return <main style={{ padding: '2rem' }}>Checking admin access…</main>
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-7 w-32" />
+        <Skeleton className="h-4 w-56" />
+      </div>
+    )
   }
 
   if (state.status === 'denied') {
     return (
-      <main style={{ padding: '2rem' }}>
-        <h1>Admin</h1>
-        <p role="alert">
-          {state.message} (HTTP {state.httpStatus})
-        </p>
-      </main>
+      <div className="max-w-md">
+        <PageHeader title="Admin" />
+        <ErrorNotice message={`${state.message} (HTTP ${state.httpStatus})`} />
+      </div>
     )
   }
 
   return (
-    <main style={{ padding: '2rem' }}>
-      <h1>Admin</h1>
-      <p>Admin shell — token queue ships in Phase 11.</p>
-      <p>{state.email}</p>
-    </main>
+    <>
+      <PageHeader title="Admin" />
+      <InfoNotice message="Admin shell — token queue ships in Phase 11." />
+      <p className="text-sm text-muted-foreground">{state.email}</p>
+    </>
   )
 }

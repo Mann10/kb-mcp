@@ -1,8 +1,43 @@
 import { useEffect, useState } from 'react'
-import type { CSSProperties } from 'react'
 import { Navigate } from 'react-router-dom'
+import { Check, RefreshCw, X, XCircle } from 'lucide-react'
 import { useAuth } from '../AuthContext'
 import OneTimeReveal from '../components/OneTimeReveal'
+import TokenStatus from '../components/TokenStatus'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { ErrorNotice, PageHeader, SectionTitle } from '@/components/feedback'
 import { fmtDate } from '../format'
 
 // BFF contracts (Plan 02): authFetch("/api/admin/requests"), authFetch("/api/admin/mint"),
@@ -33,10 +68,9 @@ interface MaskedToken {
   status: string
 }
 
-const cell: CSSProperties = { textAlign: 'left', padding: '0.35rem 0.9rem 0.35rem 0', verticalAlign: 'top' }
-const mono: CSSProperties = { ...cell, fontFamily: 'ui-monospace, monospace', whiteSpace: 'nowrap' }
-const nowrap: CSSProperties = { ...cell, whiteSpace: 'nowrap' }
-const section: CSSProperties = { marginBottom: '1.5rem' }
+type Confirm =
+  | { kind: 'revoke'; prefix: string }
+  | { kind: 'rotate'; prefix: string }
 
 export default function AdminTokensPage() {
   const { isLoggedIn, session, authFetch } = useAuth()
@@ -50,6 +84,7 @@ export default function AdminTokensPage() {
   const [mintExpiry, setMintExpiry] = useState('')
   const [reveal, setReveal] = useState<{ token: string; label: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [confirm, setConfirm] = useState<Confirm | null>(null)
 
   useEffect(() => {
     if (!isLoggedIn) return
@@ -109,17 +144,20 @@ export default function AdminTokensPage() {
   }
 
   if (state.status === 'loading') {
-    return <main style={{ padding: '2rem' }}>Checking admin access…</main>
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-7 w-40" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+    )
   }
 
   if (state.status === 'denied') {
     return (
-      <main style={{ padding: '2rem' }}>
-        <h1>Token Admin</h1>
-        <p role="alert">
-          {state.message} (HTTP {state.httpStatus})
-        </p>
-      </main>
+      <div className="max-w-md">
+        <PageHeader title="Token admin" />
+        <ErrorNotice message={`${state.message} (HTTP ${state.httpStatus})`} />
+      </div>
     )
   }
 
@@ -178,7 +216,6 @@ export default function AdminTokensPage() {
   }
 
   const revoke = async (prefix: string) => {
-    if (!window.confirm(`Revoke token ${prefix}…? It will stop working immediately.`)) return
     setError(null)
     const res = await authFetch('/api/admin/revoke', {
       method: 'POST',
@@ -194,7 +231,6 @@ export default function AdminTokensPage() {
   }
 
   const rotate = async (prefix: string) => {
-    if (!window.confirm(`Rotate token ${prefix}…? The old secret stops working.`)) return
     setError(null)
     const res = await authFetch('/api/admin/rotate', {
       method: 'POST',
@@ -213,145 +249,266 @@ export default function AdminTokensPage() {
     await refreshQueue()
   }
 
+  const runConfirm = async () => {
+    if (!confirm) return
+    const { kind, prefix } = confirm
+    setConfirm(null)
+    if (kind === 'revoke') await revoke(prefix)
+    else await rotate(prefix)
+  }
+
   return (
-    <main style={{ padding: '2rem' }}>
-      <h1>Token Admin</h1>
-      <p>Signed in as {state.email}</p>
-      {error && <p role="alert">{error}</p>}
+    <>
+      <PageHeader
+        title="Token admin"
+        description={`Approve write-access requests and manage every issued token. Signed in as ${state.email}.`}
+      />
+
       {reveal && (
         <OneTimeReveal token={reveal.token} label={reveal.label} onDismiss={() => setReveal(null)} />
       )}
 
-      <section style={section}>
-        <h2>Approval queue</h2>
+      <ErrorNotice message={error} />
+
+      <section className="mb-9">
+        <SectionTitle className="mb-3">
+          Approval queue
+          {pending.length > 0 && (
+            <span className="ml-2 font-normal text-muted-foreground">{pending.length}</span>
+          )}
+        </SectionTitle>
+
         {pending.length === 0 ? (
-          <p>No pending requests.</p>
+          <Empty className="border border-dashed">
+            <EmptyHeader>
+              <EmptyTitle>No pending requests</EmptyTitle>
+              <EmptyDescription>Write-access requests will appear here for approval.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
-          <table style={{ borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={cell}>Requester</th>
-                <th style={cell}>Date</th>
-                <th style={cell}>Status</th>
-                <th style={cell}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Requester</TableHead>
+                <TableHead>Requested</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {pending.map((r) => (
-                <tr key={r.id}>
-                  <td style={cell}>{r.user_email}</td>
-                  <td style={nowrap}>{fmtDate(r.created_at)}</td>
-                  <td style={cell}>{r.status}</td>
-                  <td style={nowrap}>
-                    <button type="button" onClick={() => decide(r.id, 'approve')}>
+                <TableRow key={r.id}>
+                  <TableCell>{r.user_email}</TableCell>
+                  <TableCell className="tabular whitespace-nowrap text-muted-foreground">
+                    {fmtDate(r.created_at)}
+                  </TableCell>
+                  <TableCell>
+                    <TokenStatus status={r.status} />
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <Button size="sm" onClick={() => decide(r.id, 'approve')}>
+                      <Check data-icon="inline-start" />
                       Approve
-                    </button>{' '}
-                    <button type="button" onClick={() => decide(r.id, 'deny')}>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => decide(r.id, 'deny')}
+                    >
+                      <X data-icon="inline-start" />
                       Deny
-                    </button>
-                  </td>
-                </tr>
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
+
         {history.length > 0 && (
-          <>
-            <h3>History</h3>
-            <table style={{ borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={cell}>Requester</th>
-                  <th style={cell}>Status</th>
-                  <th style={cell}>Decided at</th>
-                  <th style={cell}>Decided by</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="mt-7">
+            <SectionTitle className="mb-2 text-muted-foreground">Decision history</SectionTitle>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Requester</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Decided</TableHead>
+                  <TableHead>By</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {history.map((r) => (
-                  <tr key={r.id}>
-                    <td style={cell}>{r.user_email}</td>
-                    <td style={cell}>{r.status}</td>
-                    <td style={nowrap}>{r.decided_at ? fmtDate(r.decided_at) : '—'}</td>
-                    <td style={cell}>{r.decided_by ?? '—'}</td>
-                  </tr>
+                  <TableRow key={r.id}>
+                    <TableCell>{r.user_email}</TableCell>
+                    <TableCell>
+                      <TokenStatus status={r.status} />
+                    </TableCell>
+                    <TableCell className="tabular whitespace-nowrap text-muted-foreground">
+                      {r.decided_at ? fmtDate(r.decided_at) : '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{r.decided_by ?? '—'}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </>
+              </TableBody>
+            </Table>
+          </div>
         )}
       </section>
 
-      <section style={section}>
-        <h2>Direct mint</h2>
-        <label>
-          Email <input type="email" value={mintEmail} onChange={(e) => setMintEmail(e.target.value)} />
-        </label>{' '}
-        <label>
-          Type{' '}
-          <select value={mintType} onChange={(e) => setMintType(e.target.value)}>
-            <option value="read">read</option>
-            <option value="read_write">read-write</option>
-          </select>
-        </label>{' '}
-        <label>
-          Expiry override (optional){' '}
-          <input type="date" value={mintExpiry} onChange={(e) => setMintExpiry(e.target.value)} />
-        </label>{' '}
-        <button type="button" onClick={directMint}>
-          Mint token
-        </button>
+      <Separator className="mb-7" />
+
+      <section className="mb-9 max-w-2xl">
+        <SectionTitle className="mb-3">Mint a token directly</SectionTitle>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Issues a token without a request. Use this for service accounts and CI.
+        </p>
+        <FieldGroup>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field>
+              <FieldLabel htmlFor="mint-email">Email</FieldLabel>
+              <Input
+                id="mint-email"
+                type="email"
+                value={mintEmail}
+                onChange={(e) => setMintEmail(e.target.value)}
+                placeholder="service@example.com"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="mint-type">Type</FieldLabel>
+              <Select value={mintType} onValueChange={setMintType}>
+                <SelectTrigger id="mint-type" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="read">Read</SelectItem>
+                    <SelectItem value="read_write">Read and write</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="mint-expiry">Expiry override</FieldLabel>
+              <Input
+                id="mint-expiry"
+                type="date"
+                value={mintExpiry}
+                onChange={(e) => setMintExpiry(e.target.value)}
+              />
+            </Field>
+          </div>
+          <div>
+            <Button type="button" onClick={directMint} disabled={!mintEmail.trim()}>
+              Mint token
+            </Button>
+          </div>
+        </FieldGroup>
       </section>
 
-      <section style={section}>
-        <h2>All tokens</h2>
-        <label>
-          <input
-            type="checkbox"
-            aria-label="include revoked/expired"
-            checked={includeRevoked}
-            onChange={(e) => setIncludeRevoked(e.target.checked)}
-          />{' '}
-          Include revoked/expired
-        </label>
+      <Separator className="mb-7" />
+
+      <section>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <SectionTitle>
+            All tokens
+            {tokens.length > 0 && (
+              <span className="ml-2 font-normal text-muted-foreground">{tokens.length}</span>
+            )}
+          </SectionTitle>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={includeRevoked}
+              onCheckedChange={(v) => setIncludeRevoked(v === true)}
+            />
+            Include revoked and expired
+          </label>
+        </div>
+
         {tokens.length === 0 ? (
-          <p>No tokens yet.</p>
+          <Empty className="border border-dashed">
+            <EmptyHeader>
+              <EmptyTitle>No tokens issued</EmptyTitle>
+              <EmptyDescription>Minted tokens for every user appear in this table.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
-          <table style={{ borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={cell}>Owner</th>
-                <th style={cell}>Token</th>
-                <th style={cell}>Type</th>
-                <th style={cell}>Created</th>
-                <th style={cell}>Expires</th>
-                <th style={cell}>Status</th>
-                <th style={cell}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Owner</TableHead>
+                <TableHead>Token</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Expires</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {tokens.map((t) => (
-                <tr key={`${t.username}${t.prefix}${t.created_at}`}>
-                  <td style={cell}>{t.username}</td>
-                  <td style={mono}>{t.display}</td>
-                  <td style={cell}>{t.token_type}</td>
-                  <td style={nowrap}>{fmtDate(t.created_at)}</td>
-                  <td style={nowrap}>{fmtDate(t.expires_at)}</td>
-                  <td style={cell}>{t.status}</td>
-                  <td style={nowrap}>
-                    <button type="button" onClick={() => revoke(t.prefix)}>
-                      Revoke
-                    </button>{' '}
-                    <button type="button" onClick={() => rotate(t.prefix)}>
+                <TableRow key={`${t.username}${t.prefix}${t.created_at}`}>
+                  <TableCell>{t.username}</TableCell>
+                  <TableCell className="font-mono text-[0.8125rem] tabular-nums">
+                    {t.display}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{t.token_type}</TableCell>
+                  <TableCell className="tabular whitespace-nowrap text-muted-foreground">
+                    {fmtDate(t.created_at)}
+                  </TableCell>
+                  <TableCell className="tabular whitespace-nowrap text-muted-foreground">
+                    {fmtDate(t.expires_at)}
+                  </TableCell>
+                  <TableCell>
+                    <TokenStatus status={t.status} />
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setConfirm({ kind: 'rotate', prefix: t.prefix })}
+                    >
+                      <RefreshCw data-icon="inline-start" />
                       Rotate
-                    </button>
-                  </td>
-                </tr>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setConfirm({ kind: 'revoke', prefix: t.prefix })}
+                    >
+                      <XCircle data-icon="inline-start" />
+                      Revoke
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
       </section>
-    </main>
+
+      <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm?.kind === 'rotate' ? 'Rotate this token?' : 'Revoke this token?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm?.kind === 'rotate'
+                ? `The current secret for ${confirm?.prefix}… stops working immediately and a new one is issued.`
+                : `${confirm?.prefix}… will stop working immediately. Anything using it will fail.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void runConfirm()}>
+              {confirm?.kind === 'rotate' ? 'Rotate token' : 'Revoke token'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

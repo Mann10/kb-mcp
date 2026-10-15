@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
+import { Button } from '@/components/ui/button'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { ErrorNotice } from '@/components/feedback'
 
 export default function LoginPage() {
   const { isLoggedIn, signIn, signUp } = useAuth()
@@ -35,52 +40,98 @@ export default function LoginPage() {
     }
   }
 
+  const creating = mode === 'signup'
+
   return (
-    <main style={{ maxWidth: 420, margin: '4rem auto', padding: '0 1rem' }}>
-      <h1>{mode === 'signin' ? 'Sign in' : 'Sign up'}</h1>
-      <form onSubmit={handleSubmit}>
-        <label>
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            style={{ display: 'block', width: '100%', margin: '0.25rem 0 1rem' }}
-          />
-        </label>
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-            style={{ display: 'block', width: '100%', margin: '0.25rem 0 1rem' }}
-          />
-        </label>
-        {error && (
-          <p role="alert" style={{ color: 'crimson' }}>
-            {error}
-          </p>
-        )}
-        <button type="submit" disabled={busy}>
-          {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Sign up'}
-        </button>
-      </form>
-      <p>
-        {mode === 'signin' ? (
-          <button type="button" onClick={() => setMode('signup')}>
-            Need an account? Sign up
-          </button>
-        ) : (
-          <button type="button" onClick={() => setMode('signin')}>
-            Have an account? Sign in
-          </button>
-        )}
-      </p>
-    </main>
+    <div className="flex min-h-[70dvh] items-center justify-center">
+      <div className="w-full max-w-sm">
+        <h1 className="text-xl font-semibold tracking-tight">Sign in to KB Portal</h1>
+        <p className="mt-1 mb-6 text-sm text-muted-foreground">
+          Your account also controls which API tokens you can mint.
+        </p>
+
+        <ToggleGroup
+          type="single"
+          value={mode}
+          onValueChange={(v) => {
+            if (v) {
+              setMode(v as 'signin' | 'signup')
+              setError(null)
+            }
+          }}
+          variant="outline"
+          className="mb-5 w-full"
+        >
+          <ToggleGroupItem value="signin" className="flex-1">Sign in</ToggleGroupItem>
+          <ToggleGroupItem value="signup" className="flex-1">Create account</ToggleGroupItem>
+        </ToggleGroup>
+
+        <ErrorNotice message={error} />
+
+        <form onSubmit={handleSubmit}>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                autoFocus
+                placeholder="you@example.com"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="password">Password</FieldLabel>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete={creating ? 'new-password' : 'current-password'}
+              />
+            </Field>
+            <Button type="submit" disabled={busy} className="w-full">
+              {busy ? 'Please wait…' : creating ? 'Create account' : 'Sign in'}
+            </Button>
+          </FieldGroup>
+        </form>
+
+        <p className="mt-5 text-sm text-muted-foreground">
+          {creating ? (
+            <>
+              Already registered?{' '}
+              <button
+                type="button"
+                className="text-primary underline-offset-4 hover:underline"
+                onClick={() => {
+                  setMode('signin')
+                  setError(null)
+                }}
+              >
+                Sign in instead
+              </button>
+            </>
+          ) : (
+            <>
+              Need an account?{' '}
+              <button
+                type="button"
+                className="text-primary underline-offset-4 hover:underline"
+                onClick={() => {
+                  setMode('signup')
+                  setError(null)
+                }}
+              >
+                Create one
+              </button>
+            </>
+          )}
+        </p>
+      </div>
+    </div>
   )
 }

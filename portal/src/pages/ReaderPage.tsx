@@ -1,7 +1,26 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { CSSProperties } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, Pencil, Tag as TagIcon, Trash2, X } from 'lucide-react'
 import { useAuth } from '../AuthContext'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Input } from '@/components/ui/input'
+import { Field, FieldLabel } from '@/components/ui/field'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { ErrorNotice, InfoNotice, SectionTitle } from '@/components/feedback'
+import { fmtDate } from '../format'
 
 interface Note {
   stem: string
@@ -10,8 +29,6 @@ interface Note {
   created: string
   body: string
 }
-
-const section: CSSProperties = { marginBottom: '1.5rem' }
 
 // BFF contracts (Plans 01/02): authFetch("/api/notes/get?stem="),
 // authFetch("/api/notes/delete"), authFetch("/api/notes/add-tags"),
@@ -60,7 +77,6 @@ export default function ReaderPage() {
 
   const remove = async () => {
     if (!note) return
-    if (!window.confirm(`Delete ${note.title}? This cannot be undone.`)) return
     setError(null)
     const res = await authFetch('/api/notes/delete', {
       method: 'DELETE',
@@ -120,79 +136,152 @@ export default function ReaderPage() {
 
   if (!note && error) {
     return (
-      <main style={{ padding: '2rem' }}>
-        <p role="alert">{error}</p>
-        <p>
-          <Link to="/browse">Back to Browse</Link>
-        </p>
-      </main>
+      <div className="max-w-md">
+        <ErrorNotice message={error} />
+        <Button variant="outline" asChild>
+          <Link to="/browse">
+            <ArrowLeft data-icon="inline-start" />
+            Back to browse
+          </Link>
+        </Button>
+      </div>
     )
   }
 
   if (!note) {
     return (
-      <main style={{ padding: '2rem' }}>
-        <p>Loading…</p>
-      </main>
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-7 w-1/2" />
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-40 w-full" />
+      </div>
     )
   }
 
   const readOnly = canWrite === false
 
   return (
-    <main style={{ padding: '2rem' }}>
-      <p>
-        <Link to="/browse">Back to Browse</Link>
-      </p>
-      <h1>{note.title}</h1>
-      {error && <p role="alert">{error}</p>}
-      {notice && <p>{notice}</p>}
-      <p>
-        {note.tags.join(', ')} — {note.created}
-      </p>
-      <section style={section}>
-        <pre style={{ whiteSpace: 'pre-wrap' }}>{note.body}</pre>
-      </section>
+    <>
+      <Button variant="ghost" size="sm" asChild className="-ml-2 mb-4">
+        <Link to="/browse">
+          <ArrowLeft data-icon="inline-start" />
+          Browse
+        </Link>
+      </Button>
 
-      <section style={section}>
-        <button
-          type="button"
+      <ErrorNotice message={error} />
+      <InfoNotice message={notice} />
+
+      <header className="mb-5 border-b pb-4">
+        <h1 className="text-xl font-semibold tracking-tight">{note.title}</h1>
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          {note.tags.map((t) => (
+            <Badge key={t} variant="outline" className="font-normal">
+              {t}
+            </Badge>
+          ))}
+          <span className="tabular ml-auto text-muted-foreground">{fmtDate(note.created)}</span>
+        </div>
+      </header>
+
+      <div className="mb-7 flex flex-wrap items-center gap-2">
+        <Button
           disabled={readOnly}
           onClick={() => navigate(`/browse/${encodeURIComponent(note.stem)}/edit`)}
         >
+          <Pencil data-icon="inline-start" />
           Edit
-        </button>{' '}
-        <button type="button" disabled={readOnly} onClick={remove}>
-          Delete
-        </button>
-        {readOnly && <p>Write access required — request it under My Tokens</p>}
-      </section>
+        </Button>
 
-      <section style={section}>
-        <h2>Tags</h2>
-        <ul>
-          {note.tags.map((t) => (
-            <li key={t}>
-              {t}{' '}
-              <button type="button" disabled={readOnly} onClick={() => removeTag(t)}>
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-        <label>
-          Add tag{' '}
-          <input
-            type="text"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            disabled={readOnly}
-          />
-        </label>{' '}
-        <button type="button" disabled={readOnly} onClick={addTag}>
-          Add
-        </button>
+        {!readOnly && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">
+                <Trash2 data-icon="inline-start" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this note?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {note.title} will be removed. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void remove()}>Delete note</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+
+        {readOnly && (
+          <p className="text-sm text-muted-foreground">
+            Read-only. Request write access under{' '}
+            <Link to="/tokens" className="text-primary underline-offset-4 hover:underline">
+              My tokens
+            </Link>
+            .
+          </p>
+        )}
+      </div>
+
+      <article className="mb-9">
+        <pre className="note-body whitespace-pre-wrap">{note.body}</pre>
+      </article>
+
+      <Separator className="mb-6" />
+
+      <section>
+        <SectionTitle className="mb-3 flex items-center gap-2">
+          <TagIcon className="size-3.5 text-muted-foreground" aria-hidden />
+          Tags
+        </SectionTitle>
+
+        {note.tags.length > 0 && (
+          <ul className="mb-4 flex flex-wrap gap-1.5">
+            {note.tags.map((t) => (
+              <li key={t}>
+                <Badge variant="secondary" className="gap-1 pr-1 font-normal">
+                  {t}
+                  <button
+                    type="button"
+                    onClick={() => void removeTag(t)}
+                    disabled={readOnly}
+                    aria-label={`Remove tag ${t}`}
+                    className="rounded-full p-0.5 text-muted-foreground transition-colors hover:text-destructive disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    <X className="size-3" aria-hidden />
+                  </button>
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex max-w-sm items-end gap-2">
+          <Field className="flex-1">
+            <FieldLabel htmlFor="add-tag">Add a tag</FieldLabel>
+            <Input
+              id="add-tag"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  void addTag()
+                }
+              }}
+              disabled={readOnly}
+              placeholder="e.g. auth"
+            />
+          </Field>
+          <Button type="button" onClick={() => void addTag()} disabled={readOnly || !tagInput.trim()}>
+            Add
+          </Button>
+        </div>
       </section>
-    </main>
+    </>
   )
 }

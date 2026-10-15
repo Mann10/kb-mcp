@@ -4,7 +4,7 @@ milestone: v3.0
 milestone_name: UIF Token Portal
 status: executing
 last_updated: "2026-10-12T06:19:18.288Z"
-last_activity: 2026-10-12 -- Phase 12 execution started
+last_activity: 2026-10-15 -- Completed quick task 261015-lfe: Supabase perf
 progress:
   total_phases: 4
   completed_phases: 3
@@ -104,9 +104,15 @@ Last activity: 2026-10-12 -- Phase 12 execution started
 
 - None
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261015-lfe | Supabase perf: pooled connections, bulk reads collapse N+1, cached auth client | 2026-10-15 | 67a427d | [261015-lfe-supabase-query-performance](./quick/261015-lfe-supabase-query-performance/) |
+
 ## Session Continuity
 
-**Last Action:** Phase 12 planned — 3 plans (12-01 read BFF, 12-02 write BFF, 12-03 UI + checkpoint), RESEARCH + VALIDATION written
+Last activity: 2026-10-15 -- Completed quick task 261015-lfe: Supabase perf (pooled connections + bulk reads)
 **Next Action:** Execute Phase 12 (`/gsd-execute-phase 12`) — start with Wave 1 (12-01)
 **Context Files:**
 

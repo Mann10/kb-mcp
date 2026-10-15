@@ -1,7 +1,33 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { CSSProperties } from 'react'
+import { KeyRound, RefreshCw, XCircle } from 'lucide-react'
 import { useAuth } from '../AuthContext'
 import OneTimeReveal from '../components/OneTimeReveal'
+import TokenStatus from '../components/TokenStatus'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
+import { Field, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Separator } from '@/components/ui/separator'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { ErrorNotice, InfoNotice, PageHeader, SectionTitle } from '@/components/feedback'
 import { fmtDate } from '../format'
 
 interface MaskedToken {
@@ -22,13 +48,13 @@ interface UpgradeRequest {
   decided_at: string | null
 }
 
+type Confirm =
+  | { kind: 'revoke'; prefix: string }
+  | { kind: 'rotate'; prefix: string }
+
 function defaultExpiryDate(): string {
   return new Date(Date.now() + 90 * 86400 * 1000).toISOString().slice(0, 10)
 }
-
-const cell: CSSProperties = { textAlign: 'left', padding: '0.35rem 0.9rem 0.35rem 0', verticalAlign: 'top' }
-const mono: CSSProperties = { ...cell, fontFamily: 'ui-monospace, monospace', whiteSpace: 'nowrap' }
-const section: CSSProperties = { marginBottom: '1.5rem' }
 
 // BFF contracts (Plan 01): authFetch("/api/tokens/mine"), authFetch("/api/tokens/mint-read"),
 // authFetch("/api/tokens/request"), authFetch("/api/tokens/my-request"),
@@ -43,6 +69,7 @@ export default function TokensPage() {
   const [reveal, setReveal] = useState<{ token: string; label: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [confirm, setConfirm] = useState<Confirm | null>(null)
 
   const fail = (res: Response, body: { message?: string } | null, fallback: string) => {
     setError(body?.message ?? `${fallback} (HTTP ${res.status})`)
@@ -126,7 +153,6 @@ export default function TokensPage() {
   }
 
   const revoke = async (prefix: string) => {
-    if (!window.confirm(`Revoke token ${prefix}…? It will stop working immediately.`)) return
     setError(null)
     const res = await authFetch('/api/tokens/revoke', {
       method: 'POST',
@@ -142,7 +168,6 @@ export default function TokensPage() {
   }
 
   const rotate = async (prefix: string) => {
-    if (!window.confirm(`Rotate token ${prefix}…? The old secret stops working.`)) return
     setError(null)
     const res = await authFetch('/api/tokens/rotate', {
       method: 'POST',
@@ -161,120 +186,211 @@ export default function TokensPage() {
     await refresh()
   }
 
+  const runConfirm = async () => {
+    if (!confirm) return
+    const { kind, prefix } = confirm
+    setConfirm(null)
+    if (kind === 'revoke') await revoke(prefix)
+    else await rotate(prefix)
+  }
+
   const pending = requests.filter((r) => r.status === 'pending')
   const decided = requests.filter((r) => r.status !== 'pending')
 
   return (
-    <main style={{ padding: '2rem' }}>
-      <h1>My Tokens</h1>
-      {error && <p role="alert">{error}</p>}
-      {notice && <p>{notice}</p>}
+    <>
+      <PageHeader
+        title="My tokens"
+        description="Credentials your tools use to read and write notes."
+      />
+
       {reveal && (
         <OneTimeReveal token={reveal.token} label={reveal.label} onDismiss={() => setReveal(null)} />
       )}
 
-      <section style={section}>
-        <h2>Mint read token</h2>
-        <label>
-          Expiry date{' '}
-          <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
-        </label>{' '}
-        <button type="button" onClick={mint}>
-          Mint read token
-        </button>
+      <ErrorNotice message={error} />
+      <InfoNotice message={notice} />
+
+      <section className="mb-9 max-w-md">
+        <SectionTitle className="mb-3">Mint a read token</SectionTitle>
+        <div className="flex items-end gap-3">
+          <Field className="w-44">
+            <FieldLabel htmlFor="expiry">Expires</FieldLabel>
+            <Input
+              id="expiry"
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+            />
+          </Field>
+          <Button type="button" onClick={mint}>
+            <KeyRound data-icon="inline-start" />
+            Mint read token
+          </Button>
+        </div>
       </section>
 
-      <section style={section}>
-        <h2>My tokens</h2>
-        <label>
-          <input
-            type="checkbox"
-            aria-label="include revoked/expired"
-            checked={includeRevoked}
-            onChange={(e) => setIncludeRevoked(e.target.checked)}
-          />{' '}
-          Include revoked/expired
-        </label>
+      <Separator className="mb-7" />
+
+      <section className="mb-9">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <SectionTitle>
+            Tokens
+            {tokens.length > 0 && (
+              <span className="ml-2 font-normal text-muted-foreground">{tokens.length}</span>
+            )}
+          </SectionTitle>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={includeRevoked}
+              onCheckedChange={(v) => setIncludeRevoked(v === true)}
+            />
+            Include revoked and expired
+          </label>
+        </div>
+
         {/* include revoked toggle defaults to active-only (D-15) */}
         {tokens.length === 0 ? (
-          <p>No tokens yet.</p>
+          <Empty className="border border-dashed">
+            <EmptyHeader>
+              <EmptyTitle>No tokens yet</EmptyTitle>
+              <EmptyDescription>
+                Mint a read token above to give a script or tool access to the knowledge base.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
-          <table style={{ borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={cell}>Token</th>
-                <th style={cell}>Type</th>
-                <th style={cell}>Created</th>
-                <th style={cell}>Expires</th>
-                <th style={cell}>Status</th>
-                <th style={cell}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Token</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Expires</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {tokens.map((t) => (
-                <tr key={`${t.prefix}${t.suffix}${t.created_at}`}>
-                  <td style={mono}>{t.display}</td>
-                  <td style={cell}>{t.token_type}</td>
-                  <td style={{ ...cell, whiteSpace: 'nowrap' }}>{fmtDate(t.created_at)}</td>
-                  <td style={{ ...cell, whiteSpace: 'nowrap' }}>{fmtDate(t.expires_at)}</td>
-                  <td style={cell}>{t.status}</td>
-                  <td style={{ ...cell, whiteSpace: 'nowrap' }}>
-                    <button type="button" onClick={() => revoke(t.prefix)}>
-                      Revoke
-                    </button>{' '}
-                    <button type="button" onClick={() => rotate(t.prefix)}>
+                <TableRow key={`${t.prefix}${t.suffix}${t.created_at}`}>
+                  <TableCell className="font-mono text-[0.8125rem] tabular-nums">
+                    {t.display}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{t.token_type}</TableCell>
+                  <TableCell className="tabular whitespace-nowrap text-muted-foreground">
+                    {fmtDate(t.created_at)}
+                  </TableCell>
+                  <TableCell className="tabular whitespace-nowrap text-muted-foreground">
+                    {fmtDate(t.expires_at)}
+                  </TableCell>
+                  <TableCell>
+                    <TokenStatus status={t.status} />
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setConfirm({ kind: 'rotate', prefix: t.prefix })}
+                    >
+                      <RefreshCw data-icon="inline-start" />
                       Rotate
-                    </button>
-                  </td>
-                </tr>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setConfirm({ kind: 'revoke', prefix: t.prefix })}
+                    >
+                      <XCircle data-icon="inline-start" />
+                      Revoke
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
       </section>
 
-      <section style={section}>
-        <h2>Write upgrade</h2>
+      <Separator className="mb-7" />
+
+      <section className="max-w-2xl">
+        <SectionTitle className="mb-3">Write access</SectionTitle>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Read tokens can only fetch notes. Write access lets you create and edit them.
+        </p>
+
         {pending.length > 0 ? (
-          <ul>
+          <ul className="flex flex-col gap-2">
             {pending.map((r) => (
-              <li key={r.id}>
-                Request #{r.id} — pending since {fmtDate(r.created_at)}{' '}
-                <button type="button" onClick={() => cancelRequest(r.id)}>
+              <li
+                key={r.id}
+                className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2"
+              >
+                <TokenStatus status={r.status} />
+                <span className="tabular text-muted-foreground">
+                  requested {fmtDate(r.created_at)}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto"
+                  onClick={() => void cancelRequest(r.id)}
+                >
                   Cancel
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
         ) : (
-          <p>
-            <button type="button" onClick={requestUpgrade}>
-              Request write access
-            </button>
-          </p>
+          <Button type="button" variant="outline" onClick={requestUpgrade}>
+            Request write access
+          </Button>
         )}
+
         {decided.length > 0 && (
-          <>
-            <h3>Past requests</h3>
-            <ul>
+          <div className="mt-6">
+            <SectionTitle className="mb-2 text-muted-foreground">Past requests</SectionTitle>
+            <ul className="flex flex-col gap-1.5">
               {decided.map((r) => (
-                <li key={r.id}>
-                  Request #{r.id} — {r.status}
-                  {r.decided_at ? ` at ${fmtDate(r.decided_at)}` : ''}
+                <li key={r.id} className="flex flex-wrap items-center gap-3 text-sm">
+                  <TokenStatus status={r.status} />
+                  <span className="tabular text-muted-foreground">
+                    {r.decided_at ? fmtDate(r.decided_at) : fmtDate(r.created_at)}
+                  </span>
                   {r.status === 'denied' && (
-                    <>
-                      {' '}
-                      <button type="button" onClick={requestUpgrade}>
-                        Request again
-                      </button>
-                    </>
+                    <Button variant="link" size="sm" onClick={requestUpgrade} className="h-auto p-0">
+                      Request again
+                    </Button>
                   )}
                 </li>
               ))}
             </ul>
-          </>
+          </div>
         )}
       </section>
-    </main>
+
+      <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm?.kind === 'rotate' ? 'Rotate this token?' : 'Revoke this token?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm?.kind === 'rotate'
+                ? `The current secret for ${confirm?.prefix}… stops working immediately and a new one is issued.`
+                : `${confirm?.prefix}… will stop working immediately. Anything using it will fail.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void runConfirm()}>
+              {confirm?.kind === 'rotate' ? 'Rotate token' : 'Revoke token'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

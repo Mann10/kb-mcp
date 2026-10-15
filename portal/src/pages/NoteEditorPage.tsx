@@ -1,16 +1,26 @@
 import { useEffect, useState } from 'react'
-import type { CSSProperties } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Save } from 'lucide-react'
 import { useAuth } from '../AuthContext'
+import { Button } from '@/components/ui/button'
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { ErrorNotice, PageHeader } from '@/components/feedback'
 
 interface Template {
   name: string
   body_skeleton: string
   default_tags: string[]
 }
-
-const section: CSSProperties = { marginBottom: '1.5rem' }
-const field: CSSProperties = { display: 'block', marginBottom: '0.75rem' }
 
 // BFF contracts (Plans 01/02): authFetch("/api/notes/templates"),
 // authFetch("/api/notes/create"), authFetch("/api/notes/create-from-template"),
@@ -151,50 +161,96 @@ export default function NoteEditorPage({ mode }: { mode: 'create' | 'edit' }) {
   }
 
   return (
-    <main style={{ padding: '2rem' }}>
-      <h1>{mode === 'create' ? 'New Note' : 'Edit Note'}</h1>
-      {error && <p role="alert">{error}</p>}
+    <>
+      <PageHeader
+        title={mode === 'create' ? 'New note' : 'Edit note'}
+        description={
+          mode === 'create'
+            ? 'Notes are stored as Markdown. The title becomes the note’s filename.'
+            : 'Changing the title renames the note and its URL.'
+        }
+      />
 
-      {mode === 'create' && (
-        <section style={section}>
-          <label>
-            Template{' '}
-            <select value={template} onChange={(e) => applyTemplate(e.target.value)}>
-              <option value="blank">Blank</option>
-              {templates.map((t) => (
-                <option key={t.name} value={t.name}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </section>
-      )}
+      <ErrorNotice message={error} />
 
-      <section style={section}>
-        <label style={field}>
-          Title{' '}
-          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} />
-        </label>
-        <label style={field}>
-          Tags (comma-separated){' '}
-          <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} />
-        </label>
-        <label style={field}>
-          Created{' '}
-          <input type="date" value={created} onChange={(e) => setCreated(e.target.value)} />
-        </label>
-        <label style={field}>
-          Body{' '}
-          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={20} cols={80} />
-        </label>
-        <button type="button" onClick={save}>
-          Save
-        </button>{' '}
-        <Link to={mode === 'create' ? '/browse' : `/browse/${encodeURIComponent(stem ?? '')}`}>
-          Cancel
-        </Link>
-      </section>
-    </main>
+      <FieldGroup className="max-w-3xl">
+        {mode === 'create' && (
+          <Field className="max-w-xs">
+            <FieldLabel htmlFor="template">Template</FieldLabel>
+            <Select value={template} onValueChange={applyTemplate}>
+              <SelectTrigger id="template" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="blank">Blank</SelectItem>
+                  {templates.map((t) => (
+                    <SelectItem key={t.name} value={t.name}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
+
+        <Field>
+          <FieldLabel htmlFor="title">Title</FieldLabel>
+          <Input
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="What this note is about"
+          />
+        </Field>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="tags">Tags</FieldLabel>
+            <Input
+              id="tags"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="auth, backend"
+            />
+            <FieldDescription>Comma-separated.</FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="created">Created</FieldLabel>
+            <Input
+              id="created"
+              type="date"
+              value={created}
+              onChange={(e) => setCreated(e.target.value)}
+            />
+            <FieldDescription>Leave blank to use today’s date.</FieldDescription>
+          </Field>
+        </div>
+
+        <Field>
+          <FieldLabel htmlFor="body">Body</FieldLabel>
+          <Textarea
+            id="body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={22}
+            className="font-mono text-[0.8125rem] leading-relaxed"
+          />
+        </Field>
+
+        <div className="flex items-center gap-2">
+          <Button type="button" onClick={save}>
+            <Save data-icon="inline-start" />
+            {mode === 'create' ? 'Create note' : 'Save changes'}
+          </Button>
+          <Button variant="ghost" asChild>
+            <Link to={mode === 'create' ? '/browse' : `/browse/${encodeURIComponent(stem ?? '')}`}>
+              Cancel
+            </Link>
+          </Button>
+        </div>
+      </FieldGroup>
+    </>
   )
 }
