@@ -8,6 +8,10 @@ once per operation. ``psycopg_pool`` resets a connection on return and checks
 it out healthy, so a connection aborted mid-transaction or killed by a
 scale-to-zero Postgres is discarded rather than handed to the next request.
 
+Pooled connections run with ``prepare_threshold=None`` (server-side prepared
+statements disabled). See :func:`get_pool` for why pooling makes that
+mandatory rather than merely advisable.
+
 The connection string comes from ``SUPABASE_DB_URL`` only. It is never logged,
 never written to disk, and never given a default.
 """
@@ -19,6 +23,14 @@ import threading
 from collections.abc import Iterator
 
 import psycopg
+
+# psycopg3 connection kwargs applied to every connection this module opens,
+# pooled or not. ``prepare_threshold=None`` disables server-side prepared
+# statements; the reasoning lives in get_pool().
+CONNECTION_KWARGS: dict = {
+    "connect_timeout": 10,
+    "prepare_threshold": None,
+}
 
 # Module-level pool singleton. Keyed on the db_url() it was built for, so a
 # changed environment (tests flip it per-case) rebuilds instead of poisoning.
@@ -49,6 +61,26 @@ def get_pool():
     ``row_factory`` is deliberately left unset: every call site unpacks tuple
     rows (``row[0]``, ``_, title, body, tags, created = row``).
 
+    ``prepare_threshold=None`` is load-bearing, not a tuning knob. By default
+    psycopg3 prepares a query server-side after 5 executions on a connection,
+    naming it ``_pg3_<n>`` from a per-connection counter. It also watches
+    results for ``ROLLBACK`` and, on seeing one, clears its whole prepared-
+    statement cache and resets that counter to 0. ROLLBACK does *not*
+    deallocate prepared statements on the server, so after psycopg forgets
+    ``_pg3_0`` the name is still taken.
+
+    ``psycopg_pool`` calls ``conn.rollback()`` every time a connection is
+    returned, which is once per ``connect()`` block. That guarantee repeated
+    the discard/rename cycle ~5 times per connection, and the next threshold
+    crossing re-issued ``PREPARE _pg3_0`` against a name the server still held:
+
+        psycopg.errors.DuplicatePreparedStatement:
+        prepared statement "_pg3_0" already exists
+
+    which surfaced as 500s on any endpoint reusing a hot pooled connection.
+    Disabling server-side prepares costs a little per-query planning and is
+    irrelevant at personal-KB query volumes.
+
     The ``psycopg_pool`` import is function-local and guarded so a missing
     package degrades to direct connects instead of breaking module import.
     """
@@ -74,7 +106,7 @@ def get_pool():
             max_size=10,
             timeout=10,
             open=True,
-            kwargs={"connect_timeout": 10},
+            kwargs=dict(CONNECTION_KWARGS),
         )
         _pool_url = url
         return _pool
@@ -113,7 +145,7 @@ def connect() -> Iterator[psycopg.Connection]:
         pool = None
     if pool is None:
         # psycopg_pool unavailable: today's behavior, correctness unchanged.
-        with psycopg.connect(db_url(), connect_timeout=10) as conn:
+        with psycopg.connect(db_url(), **CONNECTION_KWARGS) as conn:
             yield conn
         return
     with pool.connection() as conn:
