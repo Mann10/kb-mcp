@@ -264,14 +264,31 @@ denial, never pass-through).
 ```powershell
 # Install dev deps + run tests
 uv sync --extra dev
-pytest                 # full suite (296 tests)
+pytest                 # full suite
 pytest tests/test_server_e2e.py   # live booted-server protocol proofs
 pytest -q tests/test_read_tools.py  # single file
 ```
 
+### Working with uv
+
+`pytest` lives in the `dev` extra, so **`--extra dev` is required**. A bare
+`uv sync` uninstalls pytest, pluggy and iniconfig and breaks the suite. To
+check whether your environment has drifted from the lock, use the same extra:
+
+```powershell
+uv lock --check           # lockfile still matches pyproject.toml (no --extra flag)
+uv sync --check --extra dev     # .venv still matches the lockfile
+```
+
+Add a dependency with `uv add <pkg>`, which updates `pyproject.toml` *and*
+`uv.lock` together. Prefer it over `uv pip install <pkg>`, which installs
+into `.venv` without recording the dependency — that leaves `pyproject.toml`
+and `uv.lock` disagreeing and every fresh `uv sync` quietly dropping the
+package. Prefer `uv lock` over hand-editing `uv.lock`.
+
 Conventions: branch-agnostic test assertions, `StringIO` for git-log capture, repos closed in
-`finally`. Storage hooks are always-on (no constructor flag). See `tests/` (16 test modules)
-and `src/kb_mcp/` for the implementation.
+`finally`. Storage hooks are always-on (no constructor flag). See `tests/` and
+`src/kb_mcp/` for the implementation.
 
 ## Project structure
 
