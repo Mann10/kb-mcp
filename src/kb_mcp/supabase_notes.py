@@ -10,10 +10,11 @@ validation and error types. Differences are storage-implied only:
   error-path side effects differ — no partial writes here by construction).
 - History goes to ``note_revisions`` via :class:`SupabaseHistory` instead of git.
 
-Connections are per-operation via :mod:`kb_mcp.db` (no pooling by design —
-correct at personal-KB scale, safe on scale-to-zero hosts).
+Connections come from :mod:`kb_mcp.db`, which pools them — one warm socket
+per process instead of a fresh TCP+TLS+auth handshake per operation.
 """
 
+from collections.abc import Sequence
 from pathlib import Path
 
 from .db import connect
@@ -119,6 +120,56 @@ class SupabaseNoteRepository:
         except Exception:
             return []
 
+    def read_notes(self, stems: Sequence[str]) -> dict[str, Note]:
+        """Bulk body read. ONE query regardless of how many stems are asked for.
+
+        Returns ``{stem: Note}``; stems that do not exist are simply absent
+        from the dict — no exception. This is what collapses the portal read
+        endpoints' N+1 ``list_stems()`` + ``read_note()`` loops into one
+        round-trip. ``psycopg`` adapts the Python list to a Postgres array
+        natively, so no stem is ever interpolated into SQL.
+        """
+        wanted = list(stems)
+        if not wanted:
+            return {}
+        try:
+            with connect() as conn, conn.cursor() as cur:
+                cur.execute(
+                    "SELECT stem, title, body, tags, created FROM notes "
+                    "WHERE stem = ANY(%s)",
+                    (wanted,),
+                )
+                rows = cur.fetchall()
+        except Exception as e:
+            raise FileIOError("<read_notes>", "read", str(e))
+        return {stem: _row_to_note(stem, title, body, tags, created) for stem, title, body, tags, created in rows}
+
+    def _metadata_rows(self, label: str):
+        """One metadata query, shared by :meth:`read_all_metadata` and
+        :meth:`list_notes`. ``label`` is the filename used in a fail-closed
+        ``FileIOError`` so each caller keeps its own error wording."""
+        try:
+            with connect() as conn, conn.cursor() as cur:
+                cur.execute("SELECT stem, title, tags, created FROM notes ORDER BY stem")
+                return cur.fetchall()
+        except Exception as e:
+            raise FileIOError(label, "read", str(e))
+
+    def read_all_metadata(self) -> dict[str, NoteMetadata]:
+        """Bulk metadata read, NO bodies. ONE query, ascending stem order.
+
+        Insertion order matches :meth:`list_stems` so callers that rely on
+        scan order (title fallback, tags catalog) behave identically.
+        """
+        return {
+            stem: NoteMetadata(
+                title=title,
+                tags=list(tags),
+                created=c.isoformat() if hasattr(c, "isoformat") else c,
+            )
+            for stem, title, tags, c in self._metadata_rows("<read_all_metadata>")
+        }
+
     def stem_exists(self, stem: str) -> bool:
         """True when a note with this stem exists."""
         try:
@@ -129,15 +180,15 @@ class SupabaseNoteRepository:
             return False
 
     def list_notes(self) -> list[NoteMetadata]:
-        try:
-            with connect() as conn, conn.cursor() as cur:
-                cur.execute("SELECT title, tags, created FROM notes")
-                rows = cur.fetchall()
-        except Exception as e:
-            raise FileIOError("<list>", "read", str(e))
+        # Same fail-closed FileIOError("<>list>", "read", ...) wording as before.
+        rows = self._metadata_rows("<list>")
         notes = [
-            NoteMetadata(title=title, tags=list(tags), created=c.isoformat() if hasattr(c, "isoformat") else c)
-            for title, tags, c in rows
+            NoteMetadata(
+                title=title,
+                tags=list(tags),
+                created=c.isoformat() if hasattr(c, "isoformat") else c,
+            )
+            for _stem, title, tags, c in rows
         ]
         return sorted(notes, key=lambda n: n.created)
 

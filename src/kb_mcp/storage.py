@@ -2,6 +2,7 @@
 
 import os
 import re
+from collections.abc import Sequence
 from io import StringIO
 from pathlib import Path
 
@@ -145,6 +146,42 @@ class NoteRepository:
             except Exception:
                 continue
         return sorted(notes, key=lambda n: n.created)
+
+    def read_notes(self, stems: Sequence[str]) -> dict[str, Note]:
+        """Bulk body read. Returns ``{stem: Note}`` for stems that exist.
+
+        Missing or malformed stems are skipped, mirroring the
+        ``except Exception: continue`` that every read call site performed
+        while looping over ``list_stems()``. Supabase overrides this with a
+        single ``WHERE stem = ANY(...)`` query; the filesystem backend has no
+        cheaper primitive, so it stays a loop but keeps the identical contract
+        so both backends satisfy one route contract.
+        """
+        notes: dict[str, Note] = {}
+        for stem in stems:
+            try:
+                notes[stem] = self.read_note(stem + ".md")
+            except Exception:
+                continue
+        return notes
+
+    def read_all_metadata(self) -> dict[str, NoteMetadata]:
+        """Bulk metadata read, NO bodies. Returns ``{stem: NoteMetadata}``.
+
+        Insertion order is ascending stem, matching :meth:`list_stems`.
+        Unreadable/malformed files are skipped exactly as :meth:`list_notes`
+        already skips them.
+        """
+        metas: dict[str, NoteMetadata] = {}
+        for stem in self.list_stems():
+            path = self.notes_dir / (stem + ".md")
+            try:
+                content = path.read_text(encoding="utf-8-sig")
+                metadata, _ = parse_frontmatter(content, path.name)
+                metas[stem] = metadata
+            except Exception:
+                continue
+        return metas
 
     def delete_note(self, filename: str, *, actor: str = "unknown") -> None:
         validate_path(self.notes_dir, filename)

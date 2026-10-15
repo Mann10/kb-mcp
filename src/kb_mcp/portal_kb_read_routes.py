@@ -22,6 +22,16 @@ can monkeypatch ``validate_portal_jwt`` on both references; CORS via
 ``portal_cors._cors_headers`` / ``handle_options``; 401
 ``PORTAL_INVALID_MESSAGE`` message-only; explicit ``OPTIONS`` per route.
 Import-safe: zero I/O and zero required env at import.
+
+Round-trips (261015-lfe): the four corpus-reading sites — ``_search_core``,
+``kb_list``, ``kb_tags`` and ``_resolve_stem``/``kb_get`` — now fetch via
+``repo.read_notes(stems)`` / ``repo.read_all_metadata()`` instead of
+``list_stems()`` plus one ``read_note()`` per note. That collapses N+1
+round-trips into a constant (search=2, list=1, tags=1, get=2) at any corpus
+size; see ``tests/test_portal_kb_perf.py``. Only the *fetch* changed — the
+rank ladder, the filter order, ``_build_snippet``, the limit clamping and
+every message string below are preserved verbatim so responses stay
+byte-identical to v1.
 """
 
 import datetime
@@ -90,11 +100,16 @@ def _search_core(query: str, tag, date_from, date_to, limit_raw) -> dict:
         stems = repo.list_stems()
     except OSError:
         stems = []
+    try:
+        notes_map = repo.read_notes(stems)
+    except Exception:
+        # Bulk read failed → behave exactly as the old per-stem loop did:
+        # every stem was skipped. Fail-closed, same empty result.
+        notes_map = {}
     ranked: list[tuple[int, str, dict]] = []
     for stem in stems:
-        try:
-            note = repo.read_note(stem + ".md")
-        except Exception:
+        note = notes_map.get(stem)
+        if note is None:
             continue
         body = note.body or ""
         title = note.metadata.title or ""
@@ -169,21 +184,26 @@ def _search_core(query: str, tag, date_from, date_to, limit_raw) -> dict:
     }
 
 
-def _resolve_stem(repo, name: str):
-    """Stem-map first, then display-title fallback (v1 _resolve_stem parity)."""
+def _resolve_stem(repo, name: str, metas: dict | None = None):
+    """Stem-map first, then display-title fallback (v1 _resolve_stem parity).
+
+    ``metas`` is an optional pre-fetched ``{stem: NoteMetadata}`` map from
+    ``read_all_metadata()``. It removes the per-stem body read the title
+    fallback used to perform; the scan order is preserved because the map's
+    insertion order is already ascending stem.
+    """
     try:
-        stem_map = {stem.lower(): stem for stem in repo.list_stems()}
-    except OSError:
-        stem_map = {}
+        source = metas if metas is not None else repo.read_all_metadata()
+    except Exception:
+        # Same fail-closed posture as the old `list_stems()` guard: an
+        # unreadable corpus resolves to no stem, hence the caller's 404.
+        source = {}
+    stem_map = {stem.lower(): stem for stem in source}
     real_stem = stem_map.get(name.lower())
     if real_stem is None:
         wanted = name.lower()
         for stem in sorted(stem_map.values()):
-            try:
-                candidate = repo.read_note(stem + ".md")
-            except Exception:
-                continue
-            if (candidate.metadata.title or "").strip().lower() == wanted:
+            if (source[stem].title or "").strip().lower() == wanted:
                 real_stem = stem
                 break
     return real_stem
@@ -220,12 +240,8 @@ async def kb_list(request: Request) -> Response:
         return _deny_401(request)
     repo = get_note_repository()
     pairs = []
-    for stem in repo.list_stems():
-        try:
-            note = repo.read_note(stem + ".md")
-        except Exception:
-            continue
-        pairs.append((note.metadata, stem))
+    for stem, metadata in repo.read_all_metadata().items():
+        pairs.append((metadata, stem))
     pairs.sort(key=lambda item: item[0].created)
     if not pairs:
         return JSONResponse({"notes": [], "message": "No notes found."}, headers=_cors_headers(request))
@@ -272,7 +288,11 @@ async def kb_get(request: Request) -> Response:
             headers=_cors_headers(request),
         )
     repo = get_note_repository()
-    real_stem = _resolve_stem(repo, name)
+    try:
+        metas = repo.read_all_metadata()
+    except Exception:
+        metas = {}
+    real_stem = _resolve_stem(repo, name, metas)
     if real_stem is None:
         return JSONResponse(
             {"success": False, "message": f"Note '{raw}' not found."},
@@ -280,8 +300,10 @@ async def kb_get(request: Request) -> Response:
             headers=_cors_headers(request),
         )
     try:
-        note = repo.read_note(real_stem + ".md")
+        note = repo.read_notes([real_stem]).get(real_stem)
     except Exception:
+        note = None
+    if note is None:
         return JSONResponse(
             {"success": False, "message": f"Note '{raw}' not found."},
             status_code=404,
@@ -317,12 +339,8 @@ async def kb_tags(request: Request) -> Response:
     repo = get_note_repository()
     counts: dict[str, int] = {}
     display: dict[str, str] = {}
-    for stem in repo.list_stems():
-        try:
-            note = repo.read_note(stem + ".md")
-        except Exception:
-            continue
-        for raw_tag in list(note.metadata.tags or []):
+    for metadata in repo.read_all_metadata().values():
+        for raw_tag in list(metadata.tags or []):
             norm = raw_tag.strip().lower()
             if not norm:
                 continue
